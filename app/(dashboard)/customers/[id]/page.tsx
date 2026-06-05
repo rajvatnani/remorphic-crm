@@ -65,7 +65,7 @@ export default async function CustomerDetailPage({
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{customer.name}</h1>
+          <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">{customer.name}</h1>
           <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
             <span className="flex items-center gap-1.5">
               <Phone className="h-3.5 w-3.5" />
@@ -80,7 +80,7 @@ export default async function CustomerDetailPage({
         <Badge
           className={
             isActive
-              ? 'bg-[#1a8585]/10 text-[#1a8585] border-0 text-sm'
+              ? 'bg-[#F15A24]/10 text-[#F15A24] border-0 text-sm'
               : 'bg-amber-50 text-amber-700 border-0 text-sm'
           }
         >

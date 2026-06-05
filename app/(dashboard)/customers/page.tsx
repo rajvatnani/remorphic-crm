@@ -63,7 +63,7 @@ export default async function CustomersPage() {
     <div className="p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">{label}s</h1>
+          <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">{label}s</h1>
           <p className="text-sm text-gray-500 mt-1">{rows.length} total</p>
         </div>
         <AddCustomerDialog label={label} />
@@ -91,7 +91,7 @@ export default async function CustomersPage() {
             {rows.map(row => (
               <TableRow key={row.id} className="cursor-pointer hover:bg-gray-50">
                 <TableCell>
-                  <Link href={`/customers/${row.id}`} className="font-medium text-gray-900 hover:text-[#1a8585]">
+                  <Link href={`/customers/${row.id}`} className="font-medium text-gray-900 hover:text-[#F15A24]">
                     {row.name}
                   </Link>
                 </TableCell>
@@ -102,7 +102,7 @@ export default async function CustomersPage() {
                     variant={row.isActive ? 'default' : 'secondary'}
                     className={
                       row.isActive
-                        ? 'bg-[#1a8585]/10 text-[#1a8585] hover:bg-[#1a8585]/20 border-0'
+                        ? 'bg-[#F15A24]/10 text-[#F15A24] hover:bg-[#F15A24]/20 border-0'
                         : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-0'
                     }
                   >

@@ -54,11 +54,11 @@ export default function SetupPage() {
       <Card className="w-full max-w-lg shadow-sm">
         <CardHeader className="text-center pb-4">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[#1a8585] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-[#F15A24] flex items-center justify-center">
               <span className="text-white font-bold text-2xl">R</span>
             </div>
           </div>
-          <CardTitle className="text-2xl font-semibold">Set up your business</CardTitle>
+          <CardTitle className="font-heading text-3xl font-bold tracking-tight">Set up your business</CardTitle>
           <CardDescription>Tell us about your business to get started</CardDescription>
         </CardHeader>
         <CardContent>
@@ -113,7 +113,7 @@ export default function SetupPage() {
             )}
             <Button
               type="submit"
-              className="w-full bg-[#1a8585] hover:bg-[#156e6e] text-white"
+              className="w-full bg-[#F15A24] hover:bg-[#d44d1b] text-white"
               disabled={loading}
             >
               {loading ? 'Creating…' : 'Create Business'}

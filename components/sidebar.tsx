@@ -10,12 +10,15 @@ import {
   Users,
   PlusCircle,
   Megaphone,
+  CalendarDays,
+  Settings,
   LogOut,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/appointments', label: 'Appointments', icon: CalendarDays },
   { href: '/customers', label: 'Customers', icon: Users },
   { href: '/add-visit', label: 'Add Visit', icon: PlusCircle },
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
@@ -33,10 +36,10 @@ export default function Sidebar({ business }: { business: Business }) {
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-40">
-      <div className="p-6 border-b border-gray-100">
+    <aside className="fixed inset-y-0 left-0 w-64 flex flex-col z-40" style={{ backgroundColor: '#fff', borderRight: '1px solid #e5e7eb' }}>
+      <div className="p-6" style={{ borderBottom: '1px solid #e5e7eb' }}>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#1a8585] flex items-center justify-center flex-shrink-0">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#F15A24' }}>
             <span className="text-white font-bold text-base">R</span>
           </div>
           <div className="min-w-0">
@@ -52,10 +55,9 @@ export default function Sidebar({ business }: { business: Business }) {
             <span
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer',
-                pathname === href
-                  ? 'bg-[#1a8585]/10 text-[#1a8585]'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                pathname === href ? 'text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
               )}
+              style={pathname === href ? { backgroundColor: '#F15A24' } : {}}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               {label}
@@ -64,7 +66,19 @@ export default function Sidebar({ business }: { business: Business }) {
         ))}
       </nav>
 
-      <div className="p-3 border-t border-gray-100">
+      <div className="p-3 space-y-0.5" style={{ borderTop: '1px solid #e5e7eb' }}>
+        <Link href="/settings">
+          <span
+            className={cn(
+              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer',
+              pathname === '/settings' ? 'text-white' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+            )}
+            style={pathname === '/settings' ? { backgroundColor: '#F15A24' } : {}}
+          >
+            <Settings className="h-4 w-4 flex-shrink-0" />
+            Settings
+          </span>
+        </Link>
         <Button
           variant="ghost"
           className="w-full justify-start text-gray-500 hover:text-red-600 hover:bg-red-50"

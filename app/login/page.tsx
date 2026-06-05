@@ -37,11 +37,11 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-sm">
         <CardHeader className="text-center pb-4">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[#1a8585] flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-[#F15A24] flex items-center justify-center">
               <span className="text-white font-bold text-2xl">R</span>
             </div>
           </div>
-          <CardTitle className="text-2xl font-semibold">Remorphic CRM</CardTitle>
+          <CardTitle className="font-heading text-3xl font-bold tracking-tight">Remorphic CRM</CardTitle>
           <CardDescription>Sign in to your business account</CardDescription>
         </CardHeader>
         <CardContent>
@@ -75,7 +75,7 @@ export default function LoginPage() {
             )}
             <Button
               type="submit"
-              className="w-full bg-[#1a8585] hover:bg-[#156e6e] text-white"
+              className="w-full bg-[#F15A24] hover:bg-[#d44d1b] text-white"
               disabled={loading}
             >
               {loading ? 'Signing in…' : 'Sign in'}

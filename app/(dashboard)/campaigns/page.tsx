@@ -187,7 +187,7 @@ export default function CampaignsPage() {
   return (
     <div className="p-6 max-w-6xl">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Campaigns</h1>
+        <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">Campaigns</h1>
         <p className="text-sm text-gray-500 mt-1">
           Re-engage inactive {label.toLowerCase()}s with a personal message
         </p>
