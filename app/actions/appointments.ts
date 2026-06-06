@@ -2,10 +2,11 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { sendWhatsApp, visitThankYouMessage, appointmentConfirmMessage } from '@/lib/whatsapp'
 
 export async function bookAppointment(formData: FormData) {
   const supabase = await createClient()
-  const { data: business } = await supabase.from('businesses').select('id').single()
+  const { data: business } = await supabase.from('businesses').select('id, name').single()
   if (!business) throw new Error('No business found')
 
   let customerId = formData.get('customer_id') as string
@@ -23,24 +24,42 @@ export async function bookAppointment(formData: FormData) {
     customerId = newCustomer.id
   }
 
+  const appointmentDate = formData.get('appointment_date') as string
+  const slotTime = formData.get('slot_time') as string
+
   const { error } = await supabase.from('appointments').insert({
     business_id: business.id,
     customer_id: customerId,
     service: (formData.get('service') as string).trim(),
-    appointment_date: formData.get('appointment_date') as string,
-    slot_time: formData.get('slot_time') as string,
+    appointment_date: appointmentDate,
+    slot_time: slotTime,
     notes: (formData.get('notes') as string)?.trim() || null,
     status: 'scheduled',
   })
 
   if (error) throw new Error(error.message)
+
+  // Send WhatsApp appointment confirmation
+  const { data: customer } = await supabase
+    .from('customers')
+    .select('name, phone')
+    .eq('id', customerId)
+    .single()
+
+  if (customer) {
+    await sendWhatsApp(
+      customer.phone,
+      appointmentConfirmMessage(customer.name, business.name, appointmentDate, slotTime)
+    )
+  }
+
   revalidatePath('/appointments')
   revalidatePath('/customers')
 }
 
 export async function confirmAppointment(appointmentId: string) {
   const supabase = await createClient()
-  const { data: business } = await supabase.from('businesses').select('id').single()
+  const { data: business } = await supabase.from('businesses').select('id, name').single()
   if (!business) throw new Error('No business found')
 
   const { data: appt } = await supabase
@@ -71,6 +90,20 @@ export async function confirmAppointment(appointmentId: string) {
     .eq('id', appointmentId)
 
   if (error) throw new Error(error.message)
+
+  // Send WhatsApp thank-you
+  const { data: customer } = await supabase
+    .from('customers')
+    .select('name, phone')
+    .eq('id', appt.customer_id)
+    .single()
+
+  if (customer) {
+    await sendWhatsApp(
+      customer.phone,
+      visitThankYouMessage(customer.name, business.name)
+    )
+  }
 
   revalidatePath('/appointments')
   revalidatePath('/dashboard')
