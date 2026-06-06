@@ -24,8 +24,15 @@ import { ChevronLeft, ChevronRight, Plus, Check, X, Search, Clock } from 'lucide
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
+function localDateStr(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 function todayStr() {
-  return new Date().toISOString().split('T')[0]
+  return localDateStr(new Date())
 }
 
 function generateSlots(config: AppointmentConfig): string[] {
@@ -58,7 +65,7 @@ function formatDate(dateStr: string) {
 function addDays(dateStr: string, n: number) {
   const d = new Date(dateStr + 'T00:00:00')
   d.setDate(d.getDate() + n)
-  return d.toISOString().split('T')[0]
+  return localDateStr(d)
 }
 
 function getDayOfWeek(dateStr: string) {

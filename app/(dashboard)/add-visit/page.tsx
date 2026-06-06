@@ -14,7 +14,8 @@ import { CUSTOMER_LABELS } from '@/types'
 import { Search, X } from 'lucide-react'
 
 function todayDate() {
-  return new Date().toISOString().split('T')[0]
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export default function AddVisitPage() {
