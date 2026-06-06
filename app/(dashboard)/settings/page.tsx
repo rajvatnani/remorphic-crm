@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { saveAppointmentConfig } from '@/app/actions/appointments'
+import { inviteStaff, removeStaff } from '@/app/actions/staff'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator'
 import { DAY_NAMES, CUSTOMER_LABELS } from '@/types'
 import type { BusinessType } from '@/types'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Trash2, UserPlus } from 'lucide-react'
 
 export default function SettingsPage() {
   // Business profile
@@ -32,7 +33,24 @@ export default function SettingsPage() {
   const [apptSaved, setApptSaved] = useState(false)
   const [apptError, setApptError] = useState<string | null>(null)
 
+  // Staff
+  const [staffList, setStaffList] = useState<{ id: string; email: string; created_at: string }[]>([])
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [invitePending, setInvitePending] = useState(false)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  const [inviteSent, setInviteSent] = useState(false)
+
   const router = useRouter()
+
+  async function loadStaff(businessId: string) {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('staff')
+      .select('id, email, created_at')
+      .eq('business_id', businessId)
+      .order('created_at')
+    setStaffList(data ?? [])
+  }
 
   useEffect(() => {
     const supabase = createClient()
@@ -54,6 +72,8 @@ export default function SettingsPage() {
         setEndTime(cfg.end_time.slice(0, 5))
         setOpenDays(cfg.open_days)
       }
+
+      await loadStaff(biz.id)
     }
     load()
   }, [])
@@ -82,6 +102,35 @@ export default function SettingsPage() {
       router.refresh()
     }
     setProfilePending(false)
+  }
+
+  async function handleInvite(e: React.FormEvent) {
+    e.preventDefault()
+    setInvitePending(true)
+    setInviteError(null)
+    setInviteSent(false)
+    try {
+      await inviteStaff(inviteEmail.trim())
+      setInviteSent(true)
+      setInviteEmail('')
+      setTimeout(() => setInviteSent(false), 4000)
+      const supabase = createClient()
+      const { data: biz } = await supabase.from('businesses').select('id').single()
+      if (biz) await loadStaff(biz.id)
+    } catch (err) {
+      setInviteError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setInvitePending(false)
+    }
+  }
+
+  async function handleRemoveStaff(staffId: string) {
+    try {
+      await removeStaff(staffId)
+      setStaffList(prev => prev.filter(s => s.id !== staffId))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to remove staff')
+    }
   }
 
   async function handleApptSave(e: React.FormEvent<HTMLFormElement>) {
@@ -257,6 +306,73 @@ export default function SettingsPage() {
               )}
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Staff Members */}
+      <Card className="shadow-none border border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">Staff Members</CardTitle>
+          <CardDescription>
+            Invite team members to access this business. They&apos;ll get a link to set their password.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+
+          {/* Invite form */}
+          <form onSubmit={handleInvite} className="flex gap-2">
+            <Input
+              type="email"
+              value={inviteEmail}
+              onChange={e => setInviteEmail(e.target.value)}
+              placeholder="colleague@example.com"
+              required
+              className="flex-1"
+            />
+            <Button type="submit" className="text-white gap-2" style={{ backgroundColor: '#F15A24' }} disabled={invitePending}>
+              <UserPlus className="h-4 w-4" />
+              {invitePending ? 'Sending…' : 'Invite'}
+            </Button>
+          </form>
+
+          {inviteError && (
+            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{inviteError}</p>
+          )}
+          {inviteSent && (
+            <p className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
+              <CheckCircle className="h-4 w-4" /> Invite sent! They&apos;ll receive an email with a link.
+            </p>
+          )}
+
+          {/* Staff list */}
+          {staffList.length > 0 && (
+            <div className="border border-gray-200 rounded-lg overflow-hidden mt-2">
+              {staffList.map((s, i) => (
+                <div
+                  key={s.id}
+                  className={`flex items-center justify-between px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}
+                >
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{s.email}</p>
+                    <p className="text-xs text-gray-400">
+                      Added {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveStaff(s.id)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                    title="Remove staff member"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {staffList.length === 0 && (
+            <p className="text-sm text-gray-400 text-center py-4">No staff members yet.</p>
+          )}
         </CardContent>
       </Card>
     </div>
