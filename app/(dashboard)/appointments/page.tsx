@@ -101,6 +101,7 @@ function AddBookingDialog({
   label: string
   onBooked: () => void
 }) {
+  const [isNew, setIsNew] = useState(false)
   const [query, setQuery] = useState('')
   const [customerId, setCustomerId] = useState('')
   const [selectedName, setSelectedName] = useState('')
@@ -111,8 +112,8 @@ function AddBookingDialog({
 
   useEffect(() => {
     if (!open) {
-      setQuery(''); setCustomerId(''); setSelectedName('')
-      setError(null); setShowSuggestions(false)
+      setIsNew(false); setQuery(''); setCustomerId('')
+      setSelectedName(''); setError(null); setShowSuggestions(false)
     }
   }, [open])
 
@@ -134,10 +135,10 @@ function AddBookingDialog({
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!customerId) { setError(`Please select a ${label.toLowerCase()}`); return }
+    if (!isNew && !customerId) { setError(`Please select a ${label.toLowerCase()}`); return }
     setError(null)
     const fd = new FormData(e.currentTarget)
-    fd.set('customer_id', customerId)
+    if (!isNew) fd.set('customer_id', customerId)
     fd.set('slot_time', slotTime)
     fd.set('appointment_date', date)
 
@@ -156,48 +157,73 @@ function AddBookingDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            Book Appointment — {formatSlotTime(slotTime)}
-          </DialogTitle>
+          <DialogTitle>Book Appointment — {formatSlotTime(slotTime)}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-2">
 
-          {/* Customer search */}
-          <div className="space-y-2">
-            <Label>{label}</Label>
-            <div ref={searchRef} className="relative">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={e => { setQuery(e.target.value); setCustomerId(''); setSelectedName(''); setShowSuggestions(true) }}
-                  onFocus={() => { if (query) setShowSuggestions(true) }}
-                  placeholder={`Search ${label.toLowerCase()} by name or phone…`}
-                  className="w-full h-9 pl-9 pr-3 rounded-lg border border-input bg-transparent text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                  autoComplete="off"
-                />
-              </div>
-              {showSuggestions && filtered.length > 0 && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
-                  {filtered.map(c => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onMouseDown={() => { setCustomerId(c.id); setSelectedName(c.name); setQuery(c.name); setShowSuggestions(false) }}
-                      className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center justify-between"
-                    >
-                      <span className="font-medium text-sm text-gray-900">{c.name}</span>
-                      <span className="text-sm text-gray-400">{c.phone}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {selectedName && customerId && (
-              <p className="text-xs font-medium" style={{ color: '#F15A24' }}>✓ {selectedName} selected</p>
-            )}
+          {/* Toggle */}
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+              <input type="radio" checked={!isNew} onChange={() => { setIsNew(false); setQuery(''); setCustomerId(''); setSelectedName('') }} className="accent-[#F15A24]" />
+              Existing {label}
+            </label>
+            <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+              <input type="radio" checked={isNew} onChange={() => setIsNew(true)} className="accent-[#F15A24]" />
+              New {label}
+            </label>
           </div>
+
+          {/* Existing customer search */}
+          {!isNew && (
+            <div className="space-y-2">
+              <div ref={searchRef} className="relative">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={e => { setQuery(e.target.value); setCustomerId(''); setSelectedName(''); setShowSuggestions(true) }}
+                    onFocus={() => { if (query) setShowSuggestions(true) }}
+                    placeholder={`Search ${label.toLowerCase()} by name or phone…`}
+                    className="w-full h-9 pl-9 pr-3 rounded-lg border border-input bg-transparent text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    autoComplete="off"
+                  />
+                </div>
+                {showSuggestions && filtered.length > 0 && (
+                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                    {filtered.map(c => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onMouseDown={() => { setCustomerId(c.id); setSelectedName(c.name); setQuery(c.name); setShowSuggestions(false) }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center justify-between"
+                      >
+                        <span className="font-medium text-sm text-gray-900">{c.name}</span>
+                        <span className="text-sm text-gray-400">{c.phone}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {selectedName && <p className="text-xs font-medium" style={{ color: '#F15A24' }}>✓ {selectedName} selected</p>}
+            </div>
+          )}
+
+          {/* New customer fields */}
+          {isNew && (
+            <div className="bg-gray-50 rounded-lg p-3 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="new_customer_name">Name</Label>
+                  <Input id="new_customer_name" name="new_customer_name" placeholder="Jane Smith" required={isNew} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="new_customer_phone">Phone</Label>
+                  <Input id="new_customer_phone" name="new_customer_phone" type="tel" placeholder="+1 555 000 0000" required={isNew} />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="service">Service</Label>
@@ -213,12 +239,7 @@ function AddBookingDialog({
 
           <div className="flex gap-3 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-            <Button
-              type="submit"
-              className="flex-1 text-white"
-              style={{ backgroundColor: '#F15A24' }}
-              disabled={pending}
-            >
+            <Button type="submit" className="flex-1 text-white" style={{ backgroundColor: '#F15A24' }} disabled={pending}>
               {pending ? 'Booking…' : 'Book Appointment'}
             </Button>
           </div>

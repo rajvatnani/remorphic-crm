@@ -8,9 +8,24 @@ export async function bookAppointment(formData: FormData) {
   const { data: business } = await supabase.from('businesses').select('id').single()
   if (!business) throw new Error('No business found')
 
+  let customerId = formData.get('customer_id') as string
+
+  // If new customer, create them first
+  if (!customerId) {
+    const name = (formData.get('new_customer_name') as string).trim()
+    const phone = (formData.get('new_customer_phone') as string).trim()
+    const { data: newCustomer, error: customerError } = await supabase
+      .from('customers')
+      .insert({ business_id: business.id, name, phone })
+      .select('id')
+      .single()
+    if (customerError) throw new Error(customerError.message)
+    customerId = newCustomer.id
+  }
+
   const { error } = await supabase.from('appointments').insert({
     business_id: business.id,
-    customer_id: formData.get('customer_id') as string,
+    customer_id: customerId,
     service: (formData.get('service') as string).trim(),
     appointment_date: formData.get('appointment_date') as string,
     slot_time: formData.get('slot_time') as string,
@@ -20,6 +35,7 @@ export async function bookAppointment(formData: FormData) {
 
   if (error) throw new Error(error.message)
   revalidatePath('/appointments')
+  revalidatePath('/customers')
 }
 
 export async function confirmAppointment(appointmentId: string) {
