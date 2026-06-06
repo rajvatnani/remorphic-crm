@@ -17,22 +17,19 @@ export async function inviteStaff(email: string) {
   const { data: business } = await supabase.from('businesses').select('id').single()
   if (!business) throw new Error('No business found')
 
-  const { data: { user: currentUser } } = await supabase.auth.getUser()
-  if (!currentUser) throw new Error('Not authenticated')
-
   const admin = adminClient()
 
-  // Check if already a staff member
+  // Check if already a member
   const { data: existing } = await admin
-    .from('staff')
+    .from('business_users')
     .select('id')
     .eq('business_id', business.id)
     .eq('email', email.toLowerCase())
     .single()
 
-  if (existing) throw new Error('This person is already a staff member')
+  if (existing) throw new Error('This person already has access')
 
-  // Send invite email — Supabase creates the user and emails them
+  // Supabase sends the invite email and creates the auth user
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
   const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
     email,
@@ -41,24 +38,21 @@ export async function inviteStaff(email: string) {
 
   if (inviteError) throw new Error(inviteError.message)
 
-  // Link the new user to this business
-  const { error: staffError } = await admin.from('staff').insert({
+  // Link to business — same table as everyone else
+  const { error } = await admin.from('business_users').insert({
     business_id: business.id,
     user_id: inviteData.user.id,
     email: email.toLowerCase(),
-    invited_by: currentUser.id,
   })
 
-  if (staffError) throw new Error(staffError.message)
+  if (error) throw new Error(error.message)
 
   revalidatePath('/settings')
 }
 
-export async function removeStaff(staffId: string) {
+export async function removeUser(businessUserId: string) {
   const supabase = await createClient()
-
-  const { error } = await supabase.from('staff').delete().eq('id', staffId)
-
+  const { error } = await supabase.from('business_users').delete().eq('id', businessUserId)
   if (error) throw new Error(error.message)
   revalidatePath('/settings')
 }

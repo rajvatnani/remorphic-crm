@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { saveAppointmentConfig } from '@/app/actions/appointments'
-import { inviteStaff, removeStaff } from '@/app/actions/staff'
+import { inviteStaff, removeUser } from '@/app/actions/staff'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -126,7 +126,7 @@ export default function SettingsPage() {
 
   async function handleRemoveStaff(staffId: string) {
     try {
-      await removeStaff(staffId)
+      await removeUser(staffId)
       setStaffList(prev => prev.filter(s => s.id !== staffId))
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to remove staff')

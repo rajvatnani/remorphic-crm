@@ -32,18 +32,26 @@ export default function SetupPage() {
       return
     }
 
-    const { error } = await supabase.from('businesses').insert({
-      name,
-      type,
-      owner_name: ownerName,
-      phone,
-      user_id: user.id,
-    })
+    const { data: business, error } = await supabase
+      .from('businesses')
+      .insert({ name, type, owner_name: ownerName, phone, user_id: user.id })
+      .select('id')
+      .single()
 
     if (error) {
       setError(error.message)
       setLoading(false)
-    } else {
+      return
+    }
+
+    // Add creator to business_users so all members share one table
+    await supabase.from('business_users').insert({
+      business_id: business.id,
+      user_id: user.id,
+      email: user.email ?? '',
+    })
+
+    if (true) {
       router.push('/dashboard')
       router.refresh()
     }
