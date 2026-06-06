@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Business } from '@/types'
+import { CUSTOMER_LABELS } from '@/types'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
@@ -16,16 +17,17 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/appointments', label: 'Appointments', icon: CalendarDays },
-  { href: '/customers', label: 'Customers', icon: Users },
-  { href: '/add-visit', label: 'Add Visit', icon: PlusCircle },
-  { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
-]
-
 export default function Sidebar({ business }: { business: Business }) {
   const pathname = usePathname()
+  const customerLabel = CUSTOMER_LABELS[business.type as keyof typeof CUSTOMER_LABELS] + 's'
+
+  const navItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/appointments', label: 'Appointments', icon: CalendarDays },
+    { href: '/customers', label: customerLabel, icon: Users },
+    { href: '/add-visit', label: 'Add Visit', icon: PlusCircle },
+    { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
+  ]
   const router = useRouter()
 
   async function handleLogout() {

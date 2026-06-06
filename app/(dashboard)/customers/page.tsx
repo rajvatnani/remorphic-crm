@@ -77,23 +77,22 @@ export default async function CustomersPage() {
               <TableHead className="font-medium">Phone</TableHead>
               <TableHead className="font-medium">Last Visit</TableHead>
               <TableHead className="font-medium">Status</TableHead>
-              <TableHead className="font-medium text-right">Total Visits</TableHead>
+              <TableHead className="font-medium text-center">Visits</TableHead>
+              <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 text-gray-400">
+                <TableCell colSpan={6} className="text-center py-12 text-gray-400">
                   No {label.toLowerCase()}s yet. Add your first one!
                 </TableCell>
               </TableRow>
             )}
             {rows.map(row => (
-              <TableRow key={row.id} className="cursor-pointer hover:bg-gray-50">
+              <TableRow key={row.id} className="hover:bg-gray-50">
                 <TableCell>
-                  <Link href={`/customers/${row.id}`} className="font-medium text-gray-900 hover:text-[#F15A24]">
-                    {row.name}
-                  </Link>
+                  <span className="font-medium text-gray-900">{row.name}</span>
                 </TableCell>
                 <TableCell className="text-gray-600">{row.phone}</TableCell>
                 <TableCell className="text-gray-600">{formatDate(row.lastVisit)}</TableCell>
@@ -109,7 +108,16 @@ export default async function CustomersPage() {
                     {row.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right text-gray-600">{row.totalVisits}</TableCell>
+                <TableCell className="text-center text-gray-600">{row.totalVisits}</TableCell>
+                <TableCell className="text-right">
+                  <Link
+                    href={`/customers/${row.id}`}
+                    className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-orange-50"
+                    style={{ color: '#F15A24', borderColor: '#F15A24' }}
+                  >
+                    View Visits →
+                  </Link>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
