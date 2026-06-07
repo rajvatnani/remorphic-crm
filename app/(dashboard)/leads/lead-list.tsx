@@ -54,6 +54,7 @@ function cmp(a: string, b: string) {
 
 export default function LeadList({ leads }: { leads: LeadRow[] }) {
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [sort, setSort] = useState<SortState<SortKey>>({ key: 'created', direction: 'desc' })
   const router = useRouter()
@@ -75,14 +76,16 @@ export default function LeadList({ leads }: { leads: LeadRow[] }) {
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return leads
-    return leads.filter(
-      l =>
+    return leads.filter(l => {
+      if (statusFilter !== 'all' && l.status !== statusFilter) return false
+      if (!query) return true
+      return (
         l.name.toLowerCase().includes(query) ||
         l.phone.toLowerCase().includes(query) ||
         (l.interest ?? '').toLowerCase().includes(query)
-    )
-  }, [leads, search])
+      )
+    })
+  }, [leads, search, statusFilter])
 
   const sorted = useMemo(() => {
     const dir = sort.direction === 'asc' ? 1 : -1
@@ -103,16 +106,28 @@ export default function LeadList({ leads }: { leads: LeadRow[] }) {
 
   return (
     <div>
-      <div className="relative mb-4 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search leads by name, phone, or interest…"
-          className="w-full h-9 pl-9 pr-3 rounded-lg border border-input bg-transparent text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          autoComplete="off"
-        />
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search leads by name, phone, or interest…"
+            className="w-full h-9 pl-9 pr-3 rounded-lg border border-input bg-transparent text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            autoComplete="off"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value as LeadStatus | 'all')}
+          className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <option value="all">All Statuses</option>
+          {LEAD_STATUSES.map(s => (
+            <option key={s.value} value={s.value}>{s.label}</option>
+          ))}
+        </select>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -134,7 +149,9 @@ export default function LeadList({ leads }: { leads: LeadRow[] }) {
                 <TableCell colSpan={7} className="text-center py-12 text-gray-400">
                   {leads.length === 0
                     ? 'No leads yet. Add your first one!'
-                    : `No leads match "${search}".`}
+                    : search
+                      ? `No leads match "${search}".`
+                      : 'No leads match the selected status.'}
                 </TableCell>
               </TableRow>
             )}
