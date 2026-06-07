@@ -148,10 +148,18 @@ export default async function DashboardPage() {
             Welcome back, {business.owner_name}. Here&apos;s how {business.name} is doing.
           </p>
         </div>
-        <p className="font-heading text-4xl font-extrabold italic" style={{ color: '#F15A24' }}>
+        <a
+          href="https://remorphic.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-heading text-4xl font-extrabold italic hover:underline"
+          style={{ color: '#F15A24' }}
+        >
           Trackly
-        </p>
+        </a>
       </div>
+
+      <h2 className="font-heading text-lg font-bold text-gray-900 tracking-tight mb-4">{label}s</h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map(({ title, value, icon: Icon, color, bg }) => (
