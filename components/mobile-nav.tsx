@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import type { Business } from '@/types'
 import { cn } from '@/lib/utils'
@@ -22,9 +23,15 @@ export default function MobileNav({ business }: { business: Business }) {
     <>
       <header className="md:hidden fixed top-0 inset-x-0 h-14 bg-white border-b border-gray-200 flex items-center px-4 z-40">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#F15A24' }}>
-            <span className="text-white font-bold text-sm">R</span>
-          </div>
+          <a
+            href="https://remorphic.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-7 h-7 flex items-center justify-center flex-shrink-0"
+            title="Remorphic"
+          >
+            <Image src="/remorphic-mark.png" alt="Remorphic" width={68} height={102} className="h-7 w-auto" />
+          </a>
           <span className="font-semibold text-gray-900 text-sm truncate max-w-[180px]">
             {business.name}
           </span>

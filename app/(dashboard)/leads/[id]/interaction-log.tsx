@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { deleteInteraction } from '@/app/actions/leads'
+import EditInteractionDialog from './edit-interaction-dialog'
 import {
   Table,
   TableBody,
@@ -132,14 +133,29 @@ export default function InteractionLog({ leadId, interactions }: { leadId: strin
                 {row.followUpDate ? formatDate(row.followUpDate) : '—'}
               </TableCell>
               <TableCell className="text-right">
-                <button
-                  onClick={() => handleDelete(row.id)}
-                  disabled={deletingId === row.id}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
-                  title="Delete interaction"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="flex items-center justify-end gap-1">
+                  <EditInteractionDialog
+                    leadId={leadId}
+                    interaction={{
+                      id: row.id,
+                      type: row.type,
+                      notes: row.notes,
+                      occurredAt: row.occurredAt,
+                      durationMinutes: row.durationMinutes,
+                      location: row.location,
+                      amount: row.amount,
+                      followUpDate: row.followUpDate,
+                    }}
+                  />
+                  <button
+                    onClick={() => handleDelete(row.id)}
+                    disabled={deletingId === row.id}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                    title="Delete interaction"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
