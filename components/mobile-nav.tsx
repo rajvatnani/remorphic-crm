@@ -4,14 +4,14 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { Business } from '@/types'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, CalendarDays, Megaphone, Settings } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, ClipboardList, Megaphone } from 'lucide-react'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/appointments', label: 'Appts', icon: CalendarDays },
   { href: '/customers', label: 'Customers', icon: Users },
+  { href: '/appointments', label: 'Appts', icon: CalendarDays },
+  { href: '/visits', label: 'Visits', icon: ClipboardList },
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
-  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function MobileNav({ business }: { business: Business }) {
