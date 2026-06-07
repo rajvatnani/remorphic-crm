@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
+import Image from 'next/image'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -78,9 +79,7 @@ function AcceptInviteForm() {
       <Card className="w-full max-w-md shadow-sm">
         <CardHeader className="text-center pb-4">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#F15A24' }}>
-              <span className="text-white font-bold text-2xl">R</span>
-            </div>
+            <Image src="/remorphic-logo.png" alt="Remorphic" width={646} height={140} className="h-10 w-auto" />
           </div>
           <CardTitle className="text-2xl font-semibold">You&apos;re invited!</CardTitle>
           <CardDescription>Set a password to access Remorphic CRM</CardDescription>

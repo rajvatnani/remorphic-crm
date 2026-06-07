@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardDescription } from '@/components/ui/card'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -37,11 +38,8 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-sm">
         <CardHeader className="text-center pb-4">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[#F15A24] flex items-center justify-center">
-              <span className="text-white font-bold text-2xl">R</span>
-            </div>
+            <Image src="/remorphic-logo.png" alt="Remorphic" width={646} height={140} className="h-10 w-auto" priority />
           </div>
-          <CardTitle className="font-heading text-3xl font-bold tracking-tight">Remorphic CRM</CardTitle>
           <CardDescription>Sign in to your business account</CardDescription>
         </CardHeader>
         <CardContent>
