@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { INACTIVE_THRESHOLDS, CUSTOMER_LABELS } from '@/types'
 import AddCustomerDialog from './add-customer-dialog'
-import CustomersTabs from './customers-tabs'
+import CustomerList from './customer-list'
 
 export default async function CustomersPage() {
   const supabase = await createClient()
@@ -16,18 +16,11 @@ export default async function CustomersPage() {
   thresholdDate.setDate(thresholdDate.getDate() - threshold)
   const thresholdStr = thresholdDate.toISOString().split('T')[0]
 
-  const [{ data: customers }, { data: visits }] = await Promise.all([
-    supabase
-      .from('customers')
-      .select('id, name, phone, gender, dob, created_at, visits(visited_at)')
-      .eq('business_id', business.id)
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('visits')
-      .select('id, service, visited_at, notes, customers(id, name, phone)')
-      .eq('business_id', business.id)
-      .order('visited_at', { ascending: false }),
-  ])
+  const { data: customers } = await supabase
+    .from('customers')
+    .select('id, name, phone, gender, dob, created_at, visits(visited_at)')
+    .eq('business_id', business.id)
+    .order('created_at', { ascending: false })
 
   const rows = (customers ?? []).map(c => {
     const customerVisits = c.visits as { visited_at: string }[]
@@ -50,21 +43,6 @@ export default async function CustomersPage() {
     }
   })
 
-  const visitRows = (visits ?? [])
-    .filter(v => v.customers)
-    .map(v => {
-      const customer = v.customers as unknown as { id: string; name: string; phone: string }
-      return {
-        id: v.id,
-        service: v.service,
-        visitedAt: v.visited_at,
-        notes: v.notes,
-        customerId: customer.id,
-        customerName: customer.name,
-        customerPhone: customer.phone,
-      }
-    })
-
   return (
     <div className="p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
@@ -75,7 +53,7 @@ export default async function CustomersPage() {
         <AddCustomerDialog label={label} />
       </div>
 
-      <CustomersTabs label={label} customers={rows} visits={visitRows} />
+      <CustomerList label={label} customers={rows} />
     </div>
   )
 }

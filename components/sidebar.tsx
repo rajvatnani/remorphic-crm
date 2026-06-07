@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
   Users,
-  PlusCircle,
+  ClipboardList,
   Megaphone,
   CalendarDays,
   Settings,
@@ -23,9 +23,9 @@ export default function Sidebar({ business }: { business: Business }) {
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/appointments', label: 'Appointments', icon: CalendarDays },
     { href: '/customers', label: customerLabel, icon: Users },
-    { href: '/add-visit', label: 'Add Visit', icon: PlusCircle },
+    { href: '/appointments', label: 'Appointments', icon: CalendarDays },
+    { href: '/visits', label: 'Visit Log', icon: ClipboardList },
     { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
   ]
   const router = useRouter()

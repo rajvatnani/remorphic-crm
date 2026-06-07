@@ -5,16 +5,15 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { deleteCustomer } from '@/app/actions/customers'
 import EditCustomerDialog from './edit-customer-dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
   TableBody,
   TableCell,
-  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { SortableHead, toggleSort, type SortState } from '@/components/ui/sortable-table-head'
 import { Search, Trash2 } from 'lucide-react'
 
 interface CustomerRow {
@@ -28,16 +27,6 @@ interface CustomerRow {
   totalVisits: number
 }
 
-interface VisitRow {
-  id: string
-  service: string
-  visitedAt: string
-  notes: string | null
-  customerId: string
-  customerName: string
-  customerPhone: string
-}
-
 function formatDate(dateStr: string | null) {
   if (!dateStr) return '—'
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
@@ -47,96 +36,16 @@ function formatDate(dateStr: string | null) {
   })
 }
 
-function formatVisitDate(dateStr: string) {
-  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+type SortKey = 'name' | 'phone' | 'lastVisit' | 'status' | 'visits'
+
+function cmp(a: string, b: string) {
+  return a < b ? -1 : a > b ? 1 : 0
 }
 
-function dateNDaysAgo(n: number) {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() - n)
-  return d.toISOString().split('T')[0]
-}
-
-const PERIODS = [
-  { value: 'daily', label: 'Daily', sinceDaysAgo: 0 },
-  { value: 'weekly', label: 'Weekly', sinceDaysAgo: 6 },
-  { value: 'monthly', label: 'Monthly', sinceDaysAgo: 29 },
-] as const
-
-function VisitLog({ visits, label }: { visits: VisitRow[]; label: string }) {
-  const [period, setPeriod] = useState<(typeof PERIODS)[number]['value']>('daily')
-
-  const filtered = useMemo(() => {
-    const config = PERIODS.find(p => p.value === period)!
-    const sinceStr = dateNDaysAgo(config.sinceDaysAgo)
-    return visits.filter(v => v.visitedAt >= sinceStr)
-  }, [visits, period])
-
-  return (
-    <div>
-      <Tabs value={period} onValueChange={value => setPeriod(value as typeof period)}>
-        <TabsList className="mb-4">
-          {PERIODS.map(p => (
-            <TabsTrigger key={p.value} value={p.value}>
-              {p.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
-      <p className="text-sm text-gray-500 mb-3">
-        {filtered.length} visit{filtered.length === 1 ? '' : 's'}{' '}
-        {period === 'daily' ? 'today' : period === 'weekly' ? 'in the last 7 days' : 'in the last 30 days'}
-      </p>
-
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-50 hover:bg-gray-50">
-              <TableHead className="font-medium">Date</TableHead>
-              <TableHead className="font-medium">{label}</TableHead>
-              <TableHead className="font-medium">Phone</TableHead>
-              <TableHead className="font-medium">Service</TableHead>
-              <TableHead className="font-medium">Notes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 text-gray-400">
-                  No visits in this period.
-                </TableCell>
-              </TableRow>
-            )}
-            {filtered.map(visit => (
-              <TableRow key={visit.id} className="hover:bg-gray-50">
-                <TableCell className="text-gray-600 whitespace-nowrap">{formatVisitDate(visit.visitedAt)}</TableCell>
-                <TableCell>
-                  <Link href={`/customers/${visit.customerId}`} className="font-medium text-gray-900 hover:underline">
-                    {visit.customerName}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-gray-600">{visit.customerPhone}</TableCell>
-                <TableCell className="text-gray-600">{visit.service}</TableCell>
-                <TableCell className="text-gray-500">{visit.notes || '—'}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  )
-}
-
-function CustomerList({ customers, label }: { customers: CustomerRow[]; label: string }) {
+export default function CustomerList({ customers, label }: { customers: CustomerRow[]; label: string }) {
   const [search, setSearch] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [sort, setSort] = useState<SortState<SortKey>>({ key: 'name', direction: 'asc' })
   const router = useRouter()
 
   async function handleDelete(id: string, name: string) {
@@ -162,6 +71,23 @@ function CustomerList({ customers, label }: { customers: CustomerRow[]; label: s
     )
   }, [customers, search])
 
+  const sorted = useMemo(() => {
+    const dir = sort.direction === 'asc' ? 1 : -1
+    return [...filtered].sort((a, b) => {
+      switch (sort.key) {
+        case 'name': return cmp(a.name, b.name) * dir
+        case 'phone': return cmp(a.phone, b.phone) * dir
+        case 'lastVisit': return cmp(a.lastVisit ?? '', b.lastVisit ?? '') * dir
+        case 'status': return (Number(a.isActive) - Number(b.isActive)) * dir
+        case 'visits': return (a.totalVisits - b.totalVisits) * dir
+      }
+    })
+  }, [filtered, sort])
+
+  function handleSort(key: SortKey) {
+    setSort(s => toggleSort(s, key))
+  }
+
   return (
     <div>
       <div className="relative mb-4 max-w-sm">
@@ -180,17 +106,17 @@ function CustomerList({ customers, label }: { customers: CustomerRow[]; label: s
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50 hover:bg-gray-50">
-              <TableHead className="font-medium">Name</TableHead>
-              <TableHead className="font-medium">Phone</TableHead>
-              <TableHead className="font-medium">Last Visit</TableHead>
-              <TableHead className="font-medium">Status</TableHead>
-              <TableHead className="font-medium text-center">Visits</TableHead>
-              <TableHead />
-              <TableHead />
+              <SortableHead label="Name" sortKey="name" sort={sort} onSort={handleSort} />
+              <SortableHead label="Phone" sortKey="phone" sort={sort} onSort={handleSort} />
+              <SortableHead label="Last Visit" sortKey="lastVisit" sort={sort} onSort={handleSort} />
+              <SortableHead label="Status" sortKey="status" sort={sort} onSort={handleSort} />
+              <SortableHead label="Visits" sortKey="visits" sort={sort} onSort={handleSort} className="text-center" />
+              <TableCell className="h-10 px-2" />
+              <TableCell className="h-10 px-2" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 && (
+            {sorted.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-12 text-gray-400">
                   {customers.length === 0
@@ -199,7 +125,7 @@ function CustomerList({ customers, label }: { customers: CustomerRow[]; label: s
                 </TableCell>
               </TableRow>
             )}
-            {filtered.map(row => (
+            {sorted.map(row => (
               <TableRow key={row.id} className="hover:bg-gray-50">
                 <TableCell>
                   <span className="font-medium text-gray-900">{row.name}</span>
@@ -247,30 +173,5 @@ function CustomerList({ customers, label }: { customers: CustomerRow[]; label: s
         </Table>
       </div>
     </div>
-  )
-}
-
-export default function CustomersTabs({
-  label,
-  customers,
-  visits,
-}: {
-  label: string
-  customers: CustomerRow[]
-  visits: VisitRow[]
-}) {
-  return (
-    <Tabs defaultValue="list">
-      <TabsList className="mb-4">
-        <TabsTrigger value="list">{label}s</TabsTrigger>
-        <TabsTrigger value="visits">Visit Log</TabsTrigger>
-      </TabsList>
-      <TabsContent value="list">
-        <CustomerList customers={customers} label={label} />
-      </TabsContent>
-      <TabsContent value="visits">
-        <VisitLog visits={visits} label={label} />
-      </TabsContent>
-    </Tabs>
   )
 }
