@@ -57,6 +57,51 @@ export interface AppointmentWithCustomer extends Appointment {
   customers: { name: string; phone: string }
 }
 
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'lost'
+
+export interface Lead {
+  id: string
+  business_id: string
+  name: string
+  phone: string
+  interest: string | null
+  status: LeadStatus
+  created_at: string
+}
+
+export type InteractionType = 'call' | 'meeting' | 'site_visit' | 'offer' | 'follow_up' | 'other'
+
+export interface LeadInteraction {
+  id: string
+  lead_id: string
+  business_id: string
+  type: InteractionType
+  notes: string | null
+  occurred_at: string
+  duration_minutes: number | null
+  location: string | null
+  amount: number | null
+  follow_up_date: string | null
+  created_at: string
+}
+
+export const LEAD_STATUSES: { value: LeadStatus; label: string }[] = [
+  { value: 'new', label: 'New' },
+  { value: 'contacted', label: 'Contacted' },
+  { value: 'qualified', label: 'Qualified' },
+  { value: 'converted', label: 'Converted' },
+  { value: 'lost', label: 'Lost' },
+]
+
+export const INTERACTION_TYPES: { value: InteractionType; label: string }[] = [
+  { value: 'call', label: 'Call' },
+  { value: 'meeting', label: 'Meeting' },
+  { value: 'site_visit', label: 'Site Visit' },
+  { value: 'offer', label: 'Offer' },
+  { value: 'follow_up', label: 'Follow-up' },
+  { value: 'other', label: 'Other' },
+]
+
 export const CUSTOMER_LABELS: Record<BusinessType, string> = {
   clinic: 'Patient',
   salon: 'Client',

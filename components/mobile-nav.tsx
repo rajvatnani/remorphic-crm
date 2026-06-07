@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { Business } from '@/types'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, CalendarDays, ClipboardList, Megaphone } from 'lucide-react'
+import { LayoutDashboard, Users, UserPlus, CalendarDays, ClipboardList, Megaphone } from 'lucide-react'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/customers', label: 'Customers', icon: Users },
+  { href: '/leads', label: 'Leads', icon: UserPlus },
   { href: '/appointments', label: 'Appts', icon: CalendarDays },
   { href: '/visits', label: 'Visits', icon: ClipboardList },
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
