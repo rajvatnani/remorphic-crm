@@ -8,8 +8,8 @@ import { LayoutDashboard, Users, UserPlus, CalendarDays, ClipboardList, Megaphon
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/customers', label: 'Customers', icon: Users },
   { href: '/leads', label: 'Leads', icon: UserPlus },
+  { href: '/customers', label: 'Customers', icon: Users },
   { href: '/appointments', label: 'Appts', icon: CalendarDays },
   { href: '/visits', label: 'Visits', icon: ClipboardList },
   { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
