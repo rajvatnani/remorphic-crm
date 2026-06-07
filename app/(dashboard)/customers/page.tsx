@@ -1,25 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { INACTIVE_THRESHOLDS, CUSTOMER_LABELS } from '@/types'
-import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import Link from 'next/link'
 import AddCustomerDialog from './add-customer-dialog'
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
+import CustomersTabs from './customers-tabs'
 
 export default async function CustomersPage() {
   const supabase = await createClient()
@@ -34,18 +16,25 @@ export default async function CustomersPage() {
   thresholdDate.setDate(thresholdDate.getDate() - threshold)
   const thresholdStr = thresholdDate.toISOString().split('T')[0]
 
-  const { data: customers } = await supabase
-    .from('customers')
-    .select('id, name, phone, created_at, visits(visited_at)')
-    .eq('business_id', business.id)
-    .order('created_at', { ascending: false })
+  const [{ data: customers }, { data: visits }] = await Promise.all([
+    supabase
+      .from('customers')
+      .select('id, name, phone, gender, dob, created_at, visits(visited_at)')
+      .eq('business_id', business.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('visits')
+      .select('id, service, visited_at, notes, customers(id, name, phone)')
+      .eq('business_id', business.id)
+      .order('visited_at', { ascending: false }),
+  ])
 
   const rows = (customers ?? []).map(c => {
-    const visits = c.visits as { visited_at: string }[]
-    const lastVisit = visits.length
-      ? visits.reduce((latest, v) =>
+    const customerVisits = c.visits as { visited_at: string }[]
+    const lastVisit = customerVisits.length
+      ? customerVisits.reduce((latest, v) =>
           v.visited_at > latest ? v.visited_at : latest,
-          visits[0].visited_at
+          customerVisits[0].visited_at
         )
       : null
     const isActive = lastVisit ? lastVisit >= thresholdStr : false
@@ -53,11 +42,28 @@ export default async function CustomersPage() {
       id: c.id,
       name: c.name,
       phone: c.phone,
+      gender: c.gender as 'male' | 'female' | 'other' | null,
+      dob: c.dob as string | null,
       lastVisit,
       isActive,
-      totalVisits: visits.length,
+      totalVisits: customerVisits.length,
     }
   })
+
+  const visitRows = (visits ?? [])
+    .filter(v => v.customers)
+    .map(v => {
+      const customer = v.customers as unknown as { id: string; name: string; phone: string }
+      return {
+        id: v.id,
+        service: v.service,
+        visitedAt: v.visited_at,
+        notes: v.notes,
+        customerId: customer.id,
+        customerName: customer.name,
+        customerPhone: customer.phone,
+      }
+    })
 
   return (
     <div className="p-6 max-w-6xl">
@@ -69,60 +75,7 @@ export default async function CustomersPage() {
         <AddCustomerDialog label={label} />
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-50 hover:bg-gray-50">
-              <TableHead className="font-medium">Name</TableHead>
-              <TableHead className="font-medium">Phone</TableHead>
-              <TableHead className="font-medium">Last Visit</TableHead>
-              <TableHead className="font-medium">Status</TableHead>
-              <TableHead className="font-medium text-center">Visits</TableHead>
-              <TableHead />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-gray-400">
-                  No {label.toLowerCase()}s yet. Add your first one!
-                </TableCell>
-              </TableRow>
-            )}
-            {rows.map(row => (
-              <TableRow key={row.id} className="hover:bg-gray-50">
-                <TableCell>
-                  <span className="font-medium text-gray-900">{row.name}</span>
-                </TableCell>
-                <TableCell className="text-gray-600">{row.phone}</TableCell>
-                <TableCell className="text-gray-600">{formatDate(row.lastVisit)}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant={row.isActive ? 'default' : 'secondary'}
-                    className={
-                      row.isActive
-                        ? 'bg-[#F15A24]/10 text-[#F15A24] hover:bg-[#F15A24]/20 border-0'
-                        : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-0'
-                    }
-                  >
-                    {row.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-center text-gray-600">{row.totalVisits}</TableCell>
-                <TableCell className="text-right">
-                  <Link
-                    href={`/customers/${row.id}`}
-                    className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-orange-50"
-                    style={{ color: '#F15A24', borderColor: '#F15A24' }}
-                  >
-                    View Visits →
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <CustomersTabs label={label} customers={rows} visits={visitRows} />
     </div>
   )
 }

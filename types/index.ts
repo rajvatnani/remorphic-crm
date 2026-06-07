@@ -15,6 +15,8 @@ export interface Customer {
   business_id: string
   name: string
   phone: string
+  gender: 'male' | 'female' | 'other' | null
+  dob: string | null
   created_at: string
 }
 
