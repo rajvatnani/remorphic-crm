@@ -88,10 +88,15 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-6 max-w-6xl">
-      <div className="mb-6">
-        <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Welcome back, {business.owner_name}. Here&apos;s how {business.name} is doing.
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Welcome back, {business.owner_name}. Here&apos;s how {business.name} is doing.
+          </p>
+        </div>
+        <p className="font-heading text-4xl font-extrabold italic" style={{ color: '#F15A24' }}>
+          Trackly
         </p>
       </div>
 
@@ -122,10 +127,6 @@ export default async function DashboardPage() {
           </Card>
         ))}
       </div>
-
-      <p className="font-heading text-4xl font-extrabold italic text-gray-200 text-right mt-12">
-        Trackly
-      </p>
     </div>
   )
 }
