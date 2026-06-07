@@ -13,16 +13,22 @@ function normalizePhone(phone: string): string {
 }
 
 export async function sendWhatsApp(to: string, body: string) {
+  const from = `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`
+  const toFormatted = `whatsapp:${normalizePhone(to)}`
+
+  console.log('[WhatsApp] Sending...')
+  console.log('[WhatsApp] From:', from)
+  console.log('[WhatsApp] To:', toFormatted)
+  console.log('[WhatsApp] Body:', body)
+
   try {
     const client = getClient()
-    await client.messages.create({
-      from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
-      to: `whatsapp:${normalizePhone(to)}`,
-      body,
-    })
-  } catch (err) {
-    // Never fail the main operation if WhatsApp fails
-    console.error('WhatsApp failed:', err)
+    const msg = await client.messages.create({ from, to: toFormatted, body })
+    console.log('[WhatsApp] Sent! SID:', msg.sid, 'Status:', msg.status)
+  } catch (err: any) {
+    console.error('[WhatsApp] FAILED:', err?.message)
+    console.error('[WhatsApp] Code:', err?.code)
+    console.error('[WhatsApp] More info:', err?.moreInfo)
   }
 }
 
