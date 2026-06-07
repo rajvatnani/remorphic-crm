@@ -1,6 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+import { BellRing } from 'lucide-react'
 import AddLeadDialog from './add-lead-dialog'
 import LeadList from './lead-list'
+
+function localDateStr(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 export default async function LeadsPage() {
   const supabase = await createClient()
@@ -8,11 +17,20 @@ export default async function LeadsPage() {
   const { data: business } = await supabase.from('businesses').select('*').single()
   if (!business) return null
 
-  const { data: leads } = await supabase
-    .from('leads')
-    .select('id, name, phone, interest, status, created_at')
-    .eq('business_id', business.id)
-    .order('created_at', { ascending: false })
+  const today = localDateStr(new Date())
+
+  const [{ data: leads }, { count: dueCount }] = await Promise.all([
+    supabase
+      .from('leads')
+      .select('id, name, phone, interest, status, created_at')
+      .eq('business_id', business.id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('lead_interactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', business.id)
+      .eq('follow_up_date', today),
+  ])
 
   return (
     <div className="p-6 max-w-6xl">
@@ -21,7 +39,21 @@ export default async function LeadsPage() {
           <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">Leads</h1>
           <p className="text-sm text-gray-500 mt-1">{leads?.length ?? 0} total</p>
         </div>
-        <AddLeadDialog />
+        <div className="flex items-center gap-3">
+          <Link
+            href="/leads/due"
+            className="inline-flex items-center gap-2 h-9 px-3.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            <BellRing className="h-4 w-4" />
+            Due Today
+            {!!dueCount && (
+              <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-[#F15A24] text-white text-xs font-semibold">
+                {dueCount}
+              </span>
+            )}
+          </Link>
+          <AddLeadDialog />
+        </div>
       </div>
 
       <LeadList leads={leads ?? []} />

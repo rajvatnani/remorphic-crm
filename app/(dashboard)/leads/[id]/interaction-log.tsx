@@ -36,6 +36,20 @@ function formatDate(dateStr: string) {
   })
 }
 
+function todayStr() {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function followUpBadgeClass(followUpDate: string, today: string) {
+  if (followUpDate < today) return 'text-red-600 font-medium'
+  if (followUpDate === today) return 'text-[#F15A24] font-medium'
+  return 'text-gray-600'
+}
+
 function formatDetails(row: InteractionRow) {
   switch (row.type) {
     case 'call':
@@ -45,8 +59,6 @@ function formatDetails(row: InteractionRow) {
       return row.location || '—'
     case 'offer':
       return row.amount != null ? row.amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) : '—'
-    case 'follow_up':
-      return row.followUpDate ? formatDate(row.followUpDate) : '—'
     default:
       return '—'
   }
@@ -62,6 +74,7 @@ export default function InteractionLog({ leadId, interactions }: { leadId: strin
   const [sort, setSort] = useState<SortState<SortKey>>({ key: 'date', direction: 'desc' })
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const router = useRouter()
+  const today = todayStr()
 
   const sorted = useMemo(() => {
     const dir = sort.direction === 'asc' ? 1 : -1
@@ -95,13 +108,14 @@ export default function InteractionLog({ leadId, interactions }: { leadId: strin
             <SortableHead label="Type" sortKey="type" sort={sort} onSort={key => setSort(s => toggleSort(s, key))} />
             <TableHead className="font-medium">Details</TableHead>
             <TableHead className="font-medium">Notes</TableHead>
+            <TableHead className="font-medium">Follow-up</TableHead>
             <TableCell className="h-10 px-2" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {sorted.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-12 text-gray-400">
+              <TableCell colSpan={6} className="text-center py-12 text-gray-400">
                 No interactions logged yet.
               </TableCell>
             </TableRow>
@@ -114,6 +128,9 @@ export default function InteractionLog({ leadId, interactions }: { leadId: strin
               </TableCell>
               <TableCell className="text-gray-600">{formatDetails(row)}</TableCell>
               <TableCell className="text-gray-500">{row.notes || '—'}</TableCell>
+              <TableCell className={row.followUpDate ? followUpBadgeClass(row.followUpDate, today) : 'text-gray-400'}>
+                {row.followUpDate ? formatDate(row.followUpDate) : '—'}
+              </TableCell>
               <TableCell className="text-right">
                 <button
                   onClick={() => handleDelete(row.id)}

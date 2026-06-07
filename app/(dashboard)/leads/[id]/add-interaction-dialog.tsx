@@ -99,16 +99,15 @@ export default function AddInteractionDialog({ leadId }: { leadId: string }) {
               <Input id="amount" name="amount" type="number" min="0" step="0.01" placeholder="50000" />
             </div>
           )}
-          {type === 'follow_up' && (
-            <div className="space-y-2">
-              <Label htmlFor="follow_up_date">Next Follow-up Date</Label>
-              <Input id="follow_up_date" name="follow_up_date" type="date" />
-            </div>
-          )}
-
           <div className="space-y-2">
             <Label htmlFor="notes">Notes (optional)</Label>
             <Textarea id="notes" name="notes" placeholder="What was discussed…" rows={3} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="follow_up_date">Next Follow-up Date (optional)</Label>
+            <Input id="follow_up_date" name="follow_up_date" type="date" />
+            <p className="text-xs text-gray-400">Set this to be reminded to touch base with this lead.</p>
           </div>
 
           {error && (
