@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Business } from '@/types'
@@ -48,10 +47,11 @@ export default function Sidebar({ business }: { business: Business }) {
             href="https://remorphic.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="w-9 h-9 flex items-center justify-center flex-shrink-0"
+            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: '#F15A24' }}
             title="Remorphic"
           >
-            <Image src="/remorphic-mark.png" alt="Remorphic" width={68} height={102} className="h-9 w-auto" />
+            <span className="text-white font-bold text-base">R</span>
           </a>
           <div className="min-w-0">
             <p className="font-semibold text-gray-900 text-sm truncate">{business.name}</p>

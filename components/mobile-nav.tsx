@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import type { Business } from '@/types'
 import { cn } from '@/lib/utils'
@@ -27,10 +26,11 @@ export default function MobileNav({ business }: { business: Business }) {
             href="https://remorphic.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="w-7 h-7 flex items-center justify-center flex-shrink-0"
+            className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ backgroundColor: '#F15A24' }}
             title="Remorphic"
           >
-            <Image src="/remorphic-mark.png" alt="Remorphic" width={68} height={102} className="h-7 w-auto" />
+            <span className="text-white font-bold text-sm">R</span>
           </a>
           <span className="font-semibold text-gray-900 text-sm truncate max-w-[180px]">
             {business.name}

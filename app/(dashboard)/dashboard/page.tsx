@@ -122,6 +122,10 @@ export default async function DashboardPage() {
           </Card>
         ))}
       </div>
+
+      <p className="font-heading text-4xl font-extrabold italic text-gray-200 text-right mt-12">
+        Trackly
+      </p>
     </div>
   )
 }
