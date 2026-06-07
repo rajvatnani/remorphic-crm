@@ -1,7 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { INACTIVE_THRESHOLDS, CUSTOMER_LABELS } from '@/types'
-import { Users, UserCheck, UserX, CalendarDays } from 'lucide-react'
+import { Users, UserCheck, UserX, CalendarDays, UserPlus, Activity, Handshake, BellRing } from 'lucide-react'
+
+function localDateStr(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -21,7 +28,9 @@ export default async function DashboardPage() {
     .toISOString()
     .split('T')[0]
 
-  const [{ data: customers }, { count: visitsThisMonth }] = await Promise.all([
+  const today = localDateStr(new Date())
+
+  const [{ data: customers }, { count: visitsThisMonth }, { data: leads }, { count: dueTodayCount }] = await Promise.all([
     supabase
       .from('customers')
       .select('id, visits(visited_at)')
@@ -31,6 +40,15 @@ export default async function DashboardPage() {
       .select('id', { count: 'exact', head: true })
       .eq('business_id', business.id)
       .gte('visited_at', monthStart),
+    supabase
+      .from('leads')
+      .select('id, status')
+      .eq('business_id', business.id),
+    supabase
+      .from('lead_interactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', business.id)
+      .eq('follow_up_date', today),
   ])
 
   let activeCount = 0
@@ -54,6 +72,41 @@ export default async function DashboardPage() {
   }
 
   const totalCustomers = customers?.length ?? 0
+
+  const totalLeads = leads?.length ?? 0
+  const openLeads = (leads ?? []).filter(l => l.status !== 'converted' && l.status !== 'lost').length
+  const convertedLeads = (leads ?? []).filter(l => l.status === 'converted').length
+
+  const leadStats = [
+    {
+      title: 'Total Leads',
+      value: totalLeads,
+      icon: UserPlus,
+      color: 'text-gray-600',
+      bg: 'bg-gray-100',
+    },
+    {
+      title: 'Open Leads',
+      value: openLeads,
+      icon: Activity,
+      color: 'text-blue-600',
+      bg: 'bg-blue-50',
+    },
+    {
+      title: 'Converted Leads',
+      value: convertedLeads,
+      icon: Handshake,
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+    },
+    {
+      title: 'Follow-ups Due Today',
+      value: dueTodayCount ?? 0,
+      icon: BellRing,
+      color: 'text-[#F15A24]',
+      bg: 'bg-[#F15A24]/10',
+    },
+  ]
 
   const stats = [
     {
@@ -123,6 +176,26 @@ export default async function DashboardPage() {
                   Visited within {threshold} days
                 </p>
               )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <h2 className="font-heading text-lg font-bold text-gray-900 tracking-tight mt-8 mb-4">Leads</h2>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {leadStats.map(({ title, value, icon: Icon, color, bg }) => (
+          <Card key={title} className="shadow-none border border-gray-200">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium text-gray-500">{title}</CardTitle>
+                <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
+                  <Icon className={`h-5 w-5 ${color}`} />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="font-heading text-4xl font-extrabold text-gray-900 tracking-tight">{value}</p>
             </CardContent>
           </Card>
         ))}
