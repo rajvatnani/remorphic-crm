@@ -42,8 +42,11 @@ function cmp(a: string, b: string) {
   return a < b ? -1 : a > b ? 1 : 0
 }
 
+type StatusFilter = 'all' | 'active' | 'inactive'
+
 export default function CustomerList({ customers, label }: { customers: CustomerRow[]; label: string }) {
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [sort, setSort] = useState<SortState<SortKey>>({ key: 'name', direction: 'asc' })
   const router = useRouter()
@@ -65,11 +68,13 @@ export default function CustomerList({ customers, label }: { customers: Customer
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return customers
-    return customers.filter(
-      c => c.name.toLowerCase().includes(query) || c.phone.toLowerCase().includes(query)
-    )
-  }, [customers, search])
+    return customers.filter(c => {
+      if (statusFilter === 'active' && !c.isActive) return false
+      if (statusFilter === 'inactive' && c.isActive) return false
+      if (!query) return true
+      return c.name.toLowerCase().includes(query) || c.phone.toLowerCase().includes(query)
+    })
+  }, [customers, search, statusFilter])
 
   const sorted = useMemo(() => {
     const dir = sort.direction === 'asc' ? 1 : -1
@@ -90,16 +95,27 @@ export default function CustomerList({ customers, label }: { customers: Customer
 
   return (
     <div>
-      <div className="relative mb-4 max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder={`Search ${label.toLowerCase()}s by name or phone…`}
-          className="w-full h-9 pl-9 pr-3 rounded-lg border border-input bg-transparent text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          autoComplete="off"
-        />
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={`Search ${label.toLowerCase()}s by name or phone…`}
+            className="w-full h-9 pl-9 pr-3 rounded-lg border border-input bg-transparent text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            autoComplete="off"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value as StatusFilter)}
+          className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          <option value="all">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -121,7 +137,9 @@ export default function CustomerList({ customers, label }: { customers: Customer
                 <TableCell colSpan={7} className="text-center py-12 text-gray-400">
                   {customers.length === 0
                     ? `No ${label.toLowerCase()}s yet. Add your first one!`
-                    : `No ${label.toLowerCase()}s match "${search}".`}
+                    : search
+                      ? `No ${label.toLowerCase()}s match "${search}".`
+                      : `No ${label.toLowerCase()}s match the selected status.`}
                 </TableCell>
               </TableRow>
             )}

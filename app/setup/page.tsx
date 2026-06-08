@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { INACTIVE_THRESHOLDS } from '@/types'
 import type { BusinessType } from '@/types'
 
 export default function SetupPage() {
@@ -34,7 +35,14 @@ export default function SetupPage() {
 
     const { data: business, error } = await supabase
       .from('businesses')
-      .insert({ name, type, owner_name: ownerName, phone, user_id: user.id })
+      .insert({
+        name,
+        type,
+        owner_name: ownerName,
+        phone,
+        user_id: user.id,
+        inactive_threshold_days: INACTIVE_THRESHOLDS[type],
+      })
       .select('id')
       .single()
 

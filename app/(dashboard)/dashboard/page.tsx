@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { INACTIVE_THRESHOLDS, CUSTOMER_LABELS } from '@/types'
+import { CUSTOMER_LABELS } from '@/types'
 import { Users, UserCheck, UserX, CalendarDays, UserPlus, Activity, Handshake, BellRing } from 'lucide-react'
 
 function localDateStr(d: Date) {
@@ -16,7 +16,7 @@ export default async function DashboardPage() {
   const { data: business } = await supabase.from('businesses').select('*').single()
   if (!business) return null
 
-  const threshold = INACTIVE_THRESHOLDS[business.type as keyof typeof INACTIVE_THRESHOLDS]
+  const threshold = business.inactive_threshold_days
   const label = CUSTOMER_LABELS[business.type as keyof typeof CUSTOMER_LABELS]
 
   const thresholdDate = new Date()

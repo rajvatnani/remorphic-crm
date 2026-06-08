@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { DAY_NAMES, CUSTOMER_LABELS } from '@/types'
+import { DAY_NAMES, CUSTOMER_LABELS, INACTIVE_THRESHOLDS } from '@/types'
 import type { BusinessType } from '@/types'
 import { CheckCircle, Trash2, UserPlus } from 'lucide-react'
 
@@ -19,6 +19,7 @@ export default function SettingsPage() {
   // Business profile
   const [businessName, setBusinessName] = useState('')
   const [businessType, setBusinessType] = useState<BusinessType>('other')
+  const [inactiveThresholdDays, setInactiveThresholdDays] = useState('60')
   const [profilePending, setProfilePending] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
@@ -59,6 +60,7 @@ export default function SettingsPage() {
       if (!biz) return
       setBusinessName(biz.name)
       setBusinessType(biz.type as BusinessType)
+      setInactiveThresholdDays(String(biz.inactive_threshold_days))
 
       const { data: cfg } = await supabase
         .from('appointment_config')
@@ -86,13 +88,18 @@ export default function SettingsPage() {
 
   async function handleProfileSave(e: React.FormEvent) {
     e.preventDefault()
+    const threshold = parseInt(inactiveThresholdDays, 10)
+    if (!Number.isFinite(threshold) || threshold < 1) {
+      setProfileError('Inactivity threshold must be a positive number of days')
+      return
+    }
     setProfilePending(true)
     setProfileError(null)
     setProfileSaved(false)
     const supabase = createClient()
     const { error } = await supabase
       .from('businesses')
-      .update({ name: businessName.trim(), type: businessType })
+      .update({ name: businessName.trim(), type: businessType, inactive_threshold_days: threshold })
       .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
     if (error) {
       setProfileError(error.message)
@@ -202,6 +209,23 @@ export default function SettingsPage() {
               </Select>
               <p className="text-xs text-gray-400">
                 Currently: your customers are called <span className="font-medium text-gray-600">"{currentLabel}s"</span> everywhere in the app
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="inactive_threshold_days">Inactivity Threshold (days)</Label>
+              <Input
+                id="inactive_threshold_days"
+                type="number"
+                min={1}
+                value={inactiveThresholdDays}
+                onChange={e => setInactiveThresholdDays(e.target.value)}
+                required
+                className="max-w-32"
+              />
+              <p className="text-xs text-gray-400">
+                A {currentLabel.toLowerCase()} is marked inactive after this many days without a visit.
+                Suggested for {currentLabel.toLowerCase()}s: {INACTIVE_THRESHOLDS[businessType]} days.
               </p>
             </div>
 

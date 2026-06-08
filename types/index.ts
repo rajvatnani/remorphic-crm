@@ -8,6 +8,7 @@ export interface Business {
   phone: string
   created_at: string
   user_id: string
+  inactive_threshold_days: number
 }
 
 export interface Customer {

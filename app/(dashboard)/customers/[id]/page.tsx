@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { CUSTOMER_LABELS, INACTIVE_THRESHOLDS } from '@/types'
+import { CUSTOMER_LABELS } from '@/types'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -43,7 +43,7 @@ export default async function CustomerDetailPage({
     .eq('business_id', business.id)
     .order('visited_at', { ascending: false })
 
-  const threshold = INACTIVE_THRESHOLDS[business.type as keyof typeof INACTIVE_THRESHOLDS]
+  const threshold = business.inactive_threshold_days
   const label = CUSTOMER_LABELS[business.type as keyof typeof CUSTOMER_LABELS]
 
   const thresholdDate = new Date()
