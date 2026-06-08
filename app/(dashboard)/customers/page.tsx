@@ -55,12 +55,12 @@ export default async function CustomersPage() {
 
   return (
     <div className="p-6 max-w-6xl">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">{label}s</h1>
           <p className="text-sm text-gray-500 mt-1">{rows.length} total</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <ExportCsvButton
             filenamePrefix={`${label.toLowerCase()}s`}
             headers={['Name', 'Phone', 'Gender', 'Date of Birth', 'Status', 'Visits']}
