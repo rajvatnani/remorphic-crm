@@ -3,20 +3,22 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { Business } from '@/types'
+import { CUSTOMER_LABELS } from '@/types'
 import { cn } from '@/lib/utils'
 import { LayoutDashboard, Users, UserPlus, CalendarDays, ClipboardList, Megaphone } from 'lucide-react'
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/leads', label: 'Leads', icon: UserPlus },
-  { href: '/customers', label: 'Customers', icon: Users },
-  { href: '/appointments', label: 'Appts', icon: CalendarDays },
-  { href: '/visits', label: 'Visits', icon: ClipboardList },
-  { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
-]
-
 export default function MobileNav({ business }: { business: Business }) {
   const pathname = usePathname()
+  const customerLabel = CUSTOMER_LABELS[business.type as keyof typeof CUSTOMER_LABELS] + 's'
+
+  const navItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/leads', label: 'Leads', icon: UserPlus },
+    { href: '/customers', label: customerLabel, icon: Users },
+    { href: '/appointments', label: 'Appts', icon: CalendarDays },
+    { href: '/visits', label: 'Visits', icon: ClipboardList },
+    { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
+  ]
 
   return (
     <>
