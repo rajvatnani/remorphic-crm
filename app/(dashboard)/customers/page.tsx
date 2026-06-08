@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { INACTIVE_THRESHOLDS, CUSTOMER_LABELS } from '@/types'
 import AddCustomerDialog from './add-customer-dialog'
 import CustomerList from './customer-list'
+import ExportCsvButton from '@/components/export-csv-button'
 
 export default async function CustomersPage() {
   const supabase = await createClient()
@@ -43,6 +44,15 @@ export default async function CustomersPage() {
     }
   })
 
+  const csvRows = rows.map(c => [
+    c.name,
+    c.phone,
+    c.gender ? c.gender.charAt(0).toUpperCase() + c.gender.slice(1) : '',
+    c.dob ?? '',
+    c.isActive ? 'Active' : 'Inactive',
+    c.totalVisits,
+  ])
+
   return (
     <div className="p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
@@ -50,7 +60,14 @@ export default async function CustomersPage() {
           <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">{label}s</h1>
           <p className="text-sm text-gray-500 mt-1">{rows.length} total</p>
         </div>
-        <AddCustomerDialog label={label} />
+        <div className="flex items-center gap-3">
+          <ExportCsvButton
+            filenamePrefix={`${label.toLowerCase()}s`}
+            headers={['Name', 'Phone', 'Gender', 'Date of Birth', 'Status', 'Visits']}
+            rows={csvRows}
+          />
+          <AddCustomerDialog label={label} />
+        </div>
       </div>
 
       <CustomerList label={label} customers={rows} />

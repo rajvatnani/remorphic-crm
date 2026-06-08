@@ -3,6 +3,12 @@ import Link from 'next/link'
 import { BellRing } from 'lucide-react'
 import AddLeadDialog from './add-lead-dialog'
 import LeadList from './lead-list'
+import ExportCsvButton from '@/components/export-csv-button'
+import { LEAD_STATUSES, type LeadStatus } from '@/types'
+
+const STATUS_LABELS: Record<LeadStatus, string> = Object.fromEntries(
+  LEAD_STATUSES.map(s => [s.value, s.label])
+) as Record<LeadStatus, string>
 
 function localDateStr(d: Date) {
   const y = d.getFullYear()
@@ -32,6 +38,14 @@ export default async function LeadsPage() {
       .eq('follow_up_date', today),
   ])
 
+  const csvRows = (leads ?? []).map(l => [
+    l.name,
+    l.phone,
+    l.interest ?? '',
+    l.created_at.split('T')[0],
+    STATUS_LABELS[l.status as LeadStatus],
+  ])
+
   return (
     <div className="p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
@@ -40,6 +54,11 @@ export default async function LeadsPage() {
           <p className="text-sm text-gray-500 mt-1">{leads?.length ?? 0} total</p>
         </div>
         <div className="flex items-center gap-3">
+          <ExportCsvButton
+            filenamePrefix="leads"
+            headers={['Name', 'Phone', 'Interested In', 'Added Date', 'Status']}
+            rows={csvRows}
+          />
           <Link
             href="/leads/due"
             className="inline-flex items-center gap-2 h-9 px-3.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
