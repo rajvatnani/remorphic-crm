@@ -30,9 +30,12 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
-  const publicPaths = ['/login', '/accept-invite']
+  const isPublic =
+    pathname === '/login' ||
+    pathname === '/accept-invite' ||
+    pathname.startsWith('/book/')
 
-  if (!user && !publicPaths.includes(pathname)) {
+  if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
