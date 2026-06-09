@@ -118,9 +118,17 @@ export default function BookingForm({
 
   const dayOfWeek = (d: string) => new Date(d + 'T00:00:00').getDay()
   const isClosed = (d: string) => !config.open_days.includes(dayOfWeek(d))
+  const isPastDate = (d: string) => d < today
+
+  function isPastSlot(slot: string) {
+    if (date !== today) return false
+    const now = new Date()
+    const [h, m] = slot.split(':').map(Number)
+    return h * 60 + m <= now.getHours() * 60 + now.getMinutes()
+  }
 
   function handleDateSelect(d: string) {
-    if (isClosed(d)) return
+    if (isClosed(d) || isPastDate(d)) return
     setDate(d)
     setSelectedSlot(null)
     setError(null)
@@ -343,7 +351,7 @@ export default function BookingForm({
 
           <div className="grid grid-cols-7 gap-1">
             {weekDays.map(d => {
-              const closed = isClosed(d)
+              const closed = isClosed(d) || isPastDate(d)
               const selected = d === date
               const isToday = d === today
               const dow = new Date(d + 'T00:00:00')
@@ -395,7 +403,7 @@ export default function BookingForm({
             <div className="grid grid-cols-3 gap-2">
               {slots.map(slot => {
                 const count = slotCounts[slot] ?? 0
-                const full = count >= config.max_per_slot
+                const full = count >= config.max_per_slot || isPastSlot(slot)
                 const chosen = slot === selectedSlot
                 return (
                   <button
