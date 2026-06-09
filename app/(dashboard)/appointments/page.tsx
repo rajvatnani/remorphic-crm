@@ -6,6 +6,8 @@ import {
   bookAppointment,
   confirmAppointment,
   cancelAppointment,
+  approveBooking,
+  declineBooking,
 } from '@/app/actions/appointments'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -79,7 +81,9 @@ function StatusBadge({ status }: { status: string }) {
     return <Badge className="bg-green-50 text-green-700 border-0 text-xs">Confirmed</Badge>
   if (status === 'cancelled')
     return <Badge className="bg-gray-100 text-gray-500 border-0 text-xs">Cancelled</Badge>
-  return <Badge className="bg-amber-50 text-amber-700 border-0 text-xs">Scheduled</Badge>
+  if (status === 'pending')
+    return <Badge className="bg-purple-50 text-purple-700 border-0 text-xs">Pending Approval</Badge>
+  return <Badge className="bg-blue-50 text-blue-700 border-0 text-xs">Scheduled</Badge>
 }
 
 // ─── add booking dialog ──────────────────────────────────────────────────────
@@ -258,6 +262,7 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<AppointmentWithCustomer[]>([])
   const [customers, setCustomers] = useState<{ id: string; name: string; phone: string }[]>([])
   const [loading, setLoading] = useState(true)
+  const [pendingCount, setPendingCount] = useState(0)
   const [dialogSlot, setDialogSlot] = useState<string | null>(null)
   const [actionPending, startTransition] = useTransition()
 
@@ -268,13 +273,15 @@ export default function AppointmentsPage() {
     if (!biz) return
     setBusiness(biz)
 
-    const [{ data: cfg }, { data: custs }] = await Promise.all([
+    const [{ data: cfg }, { data: custs }, { count: pc }] = await Promise.all([
       supabase.from('appointment_config').select('*').eq('business_id', biz.id).single(),
       supabase.from('customers').select('id, name, phone').eq('business_id', biz.id).order('name'),
+      supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('business_id', biz.id).eq('status', 'pending'),
     ])
 
     setConfig(cfg ?? null)
     setCustomers(custs ?? [])
+    setPendingCount(pc ?? 0)
   }
 
   async function loadAppointments(d: string) {
@@ -320,6 +327,22 @@ export default function AppointmentsPage() {
     })
   }
 
+  function handleApprove(id: string) {
+    startTransition(async () => {
+      await approveBooking(id)
+      await loadBase()
+      await loadAppointments(date)
+    })
+  }
+
+  function handleDecline(id: string) {
+    startTransition(async () => {
+      await declineBooking(id)
+      await loadBase()
+      await loadAppointments(date)
+    })
+  }
+
   const isToday = date === todayStr()
 
   return (
@@ -336,6 +359,18 @@ export default function AppointmentsPage() {
           </a>
         )}
       </div>
+
+      {/* Pending bookings banner */}
+      {pendingCount > 0 && (
+        <div className="mb-4 flex items-center gap-3 bg-purple-50 border border-purple-200 rounded-xl px-4 py-3">
+          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-600 text-white text-xs font-bold shrink-0">
+            {pendingCount}
+          </span>
+          <p className="text-sm font-medium text-purple-800">
+            {pendingCount === 1 ? '1 online booking request' : `${pendingCount} online booking requests`} waiting for your approval — navigate to the relevant date to approve.
+          </p>
+        </div>
+      )}
 
       {/* Date navigator */}
       <div className="flex items-center gap-3 mb-6">
@@ -450,6 +485,28 @@ export default function AppointmentsPage() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                           <StatusBadge status={appt.status} />
+                          {appt.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => handleApprove(appt.id)}
+                                disabled={actionPending}
+                                title="Approve booking"
+                                className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors disabled:opacity-50"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleDecline(appt.id)}
+                                disabled={actionPending}
+                                title="Decline booking"
+                                className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                                Decline
+                              </button>
+                            </>
+                          )}
                           {appt.status === 'scheduled' && (
                             <>
                               <button

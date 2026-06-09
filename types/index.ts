@@ -9,6 +9,7 @@ export interface Business {
   created_at: string
   user_id: string
   inactive_threshold_days: number
+  slug: string
 }
 
 export interface Customer {
@@ -48,7 +49,7 @@ export interface Appointment {
   service: string
   appointment_date: string
   slot_time: string
-  status: 'scheduled' | 'confirmed' | 'cancelled'
+  status: 'pending' | 'scheduled' | 'confirmed' | 'cancelled'
   notes: string | null
   visit_id: string | null
   created_at: string

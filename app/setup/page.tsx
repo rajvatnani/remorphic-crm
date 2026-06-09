@@ -33,6 +33,9 @@ export default function SetupPage() {
       return
     }
 
+    const rawSlug = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, '-').substring(0, 40)
+    const slug = rawSlug + '-' + Math.random().toString(36).substring(2, 8)
+
     const { data: business, error } = await supabase
       .from('businesses')
       .insert({
@@ -42,6 +45,7 @@ export default function SetupPage() {
         phone,
         user_id: user.id,
         inactive_threshold_days: INACTIVE_THRESHOLDS[type],
+        slug,
       })
       .select('id')
       .single()

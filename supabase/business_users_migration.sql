@@ -36,6 +36,12 @@ select business_id, user_id, email, created_at
 from staff
 on conflict (user_id) do nothing;
 
+-- Drop businesses policies that reference staff BEFORE dropping the table
+-- (Postgres refuses to drop a table while a policy on another table depends on it)
+drop policy if exists "owner_select" on businesses;
+drop policy if exists "owner_or_staff_select" on businesses;
+drop policy if exists "owner_update" on businesses;
+
 -- Drop the old staff table
 drop table if exists staff;
 
@@ -46,10 +52,6 @@ returns uuid language sql security definer stable as $$
 $$;
 
 -- Update businesses RLS: any member can read/update
-drop policy if exists "owner_select" on businesses;
-drop policy if exists "owner_or_staff_select" on businesses;
-drop policy if exists "owner_update" on businesses;
-
 create policy "members_select" on businesses
   for select using (id = get_my_business_id());
 

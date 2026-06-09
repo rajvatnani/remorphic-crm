@@ -123,6 +123,70 @@ export async function cancelAppointment(appointmentId: string) {
   revalidatePath('/appointments')
 }
 
+export async function approveBooking(appointmentId: string) {
+  const supabase = await createClient()
+  const { data: business } = await supabase.from('businesses').select('id, name').single()
+  if (!business) throw new Error('No business found')
+
+  const { data: appt } = await supabase
+    .from('appointments')
+    .select('appointment_date, slot_time, customers(name, phone)')
+    .eq('id', appointmentId)
+    .single()
+  if (!appt) throw new Error('Appointment not found')
+
+  const { error } = await supabase
+    .from('appointments')
+    .update({ status: 'scheduled' })
+    .eq('id', appointmentId)
+  if (error) throw new Error(error.message)
+
+  const customer = (appt as any).customers
+  if (customer) {
+    const fDate = new Date(appt.appointment_date + 'T00:00:00').toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric',
+    })
+    const [h, m] = (appt.slot_time as string).split(':').map(Number)
+    const period = h >= 12 ? 'PM' : 'AM'
+    const fTime = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`
+    await sendWhatsApp(
+      customer.phone,
+      `Hi ${customer.name}! Your booking at *${business.name}* on ${fDate} at ${fTime} is confirmed ✅. See you then!`
+    )
+  }
+
+  revalidatePath('/appointments')
+}
+
+export async function declineBooking(appointmentId: string) {
+  const supabase = await createClient()
+  const { data: business } = await supabase.from('businesses').select('id, name').single()
+  if (!business) throw new Error('No business found')
+
+  const { data: appt } = await supabase
+    .from('appointments')
+    .select('customers(name, phone)')
+    .eq('id', appointmentId)
+    .single()
+  if (!appt) throw new Error('Appointment not found')
+
+  const { error } = await supabase
+    .from('appointments')
+    .update({ status: 'cancelled' })
+    .eq('id', appointmentId)
+  if (error) throw new Error(error.message)
+
+  const customer = (appt as any).customers
+  if (customer) {
+    await sendWhatsApp(
+      customer.phone,
+      `Hi ${customer.name}, unfortunately your booking request at *${business.name}* could not be accepted at this time. Please contact us to reschedule.`
+    )
+  }
+
+  revalidatePath('/appointments')
+}
+
 export async function saveAppointmentConfig(formData: FormData) {
   const supabase = await createClient()
   const { data: business } = await supabase.from('businesses').select('id').single()

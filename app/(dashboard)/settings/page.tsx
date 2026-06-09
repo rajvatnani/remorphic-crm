@@ -20,6 +20,8 @@ export default function SettingsPage() {
   const [businessName, setBusinessName] = useState('')
   const [businessType, setBusinessType] = useState<BusinessType>('other')
   const [inactiveThresholdDays, setInactiveThresholdDays] = useState('60')
+  const [businessSlug, setBusinessSlug] = useState('')
+  const [urlCopied, setUrlCopied] = useState(false)
   const [profilePending, setProfilePending] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
@@ -61,6 +63,7 @@ export default function SettingsPage() {
       setBusinessName(biz.name)
       setBusinessType(biz.type as BusinessType)
       setInactiveThresholdDays(String(biz.inactive_threshold_days))
+      setBusinessSlug(biz.slug ?? '')
 
       const { data: cfg } = await supabase
         .from('appointment_config')
@@ -332,6 +335,35 @@ export default function SettingsPage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Online Booking */}
+      {businessSlug && (
+        <Card className="shadow-none border border-gray-200">
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">Online Booking Link</CardTitle>
+            <CardDescription>Share this link with customers so they can book appointments directly.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 truncate text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+                {typeof window !== 'undefined' ? `${window.location.origin}/book/${businessSlug}` : `/book/${businessSlug}`}
+              </code>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/book/${businessSlug}`)
+                  setUrlCopied(true)
+                  setTimeout(() => setUrlCopied(false), 2000)
+                }}
+              >
+                {urlCopied ? '✓ Copied' : 'Copy'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Staff Members */}
       <Card className="shadow-none border border-gray-200">
