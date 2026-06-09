@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { sendWhatsApp } from '@/lib/whatsapp'
+import { sendSMS } from '@/lib/sms'
 
 function adminClient() {
   return createSupabaseClient(
@@ -75,7 +75,7 @@ export async function sendBookingOtp(
 
   if (error) return { ok: false, error: 'Could not send code. Please try again.' }
 
-  await sendWhatsApp(
+  await sendSMS(
     normalizedPhone,
     `Your booking code is: *${code}*\n\nExpires in 10 minutes.`
   )
@@ -187,7 +187,7 @@ export async function createOnlineBooking({
   const period = h >= 12 ? 'PM' : 'AM'
   const fTime = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`
 
-  await sendWhatsApp(
+  await sendSMS(
     businessPhone,
     `📅 New booking request!\n\n*${existing?.name ?? name.trim()}* (${normalizedPhone}) wants to book on *${fDate} at ${fTime}*.\n\nOpen Remorphic CRM to approve or decline.`
   )

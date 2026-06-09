@@ -12,23 +12,23 @@ function normalizePhone(phone: string): string {
   return cleaned.startsWith('+') ? cleaned : `+${cleaned}`
 }
 
-export async function sendWhatsApp(to: string, body: string) {
-  const from = `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`
-  const toFormatted = `whatsapp:${normalizePhone(to)}`
+export async function sendSMS(to: string, body: string) {
+  const from = process.env.TWILIO_SMS_FROM!
+  const toFormatted = normalizePhone(to)
 
-  console.log('[WhatsApp] Sending...')
-  console.log('[WhatsApp] From:', from)
-  console.log('[WhatsApp] To:', toFormatted)
-  console.log('[WhatsApp] Body:', body)
+  console.log('[SMS] Sending...')
+  console.log('[SMS] From:', from)
+  console.log('[SMS] To:', toFormatted)
+  console.log('[SMS] Body:', body)
 
   try {
     const client = getClient()
     const msg = await client.messages.create({ from, to: toFormatted, body })
-    console.log('[WhatsApp] Sent! SID:', msg.sid, 'Status:', msg.status)
+    console.log('[SMS] Sent! SID:', msg.sid, 'Status:', msg.status)
   } catch (err: any) {
-    console.error('[WhatsApp] FAILED:', err?.message)
-    console.error('[WhatsApp] Code:', err?.code)
-    console.error('[WhatsApp] More info:', err?.moreInfo)
+    console.error('[SMS] FAILED:', err?.message)
+    console.error('[SMS] Code:', err?.code)
+    console.error('[SMS] More info:', err?.moreInfo)
   }
 }
 
