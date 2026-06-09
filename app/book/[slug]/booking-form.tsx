@@ -204,7 +204,7 @@ export default function BookingForm({
           </button>
           <h2 className="text-2xl font-bold text-gray-900 mb-1">Verify your phone</h2>
           <p className="text-gray-500 text-sm mb-8">
-            We sent a 6-digit code to <span className="font-medium text-gray-800">{phone}</span> via SMS.
+            We sent a 6-digit code to <span className="font-medium text-gray-800">{phone}</span> via WhatsApp.
           </p>
 
           <div className="space-y-2 mb-6">
@@ -277,7 +277,7 @@ export default function BookingForm({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">Phone number</label>
+              <label className="text-sm font-medium text-gray-700">WhatsApp number</label>
               <input
                 type="tel"
                 value={phone}
@@ -285,7 +285,7 @@ export default function BookingForm({
                 placeholder="+1 555 000 0000"
                 className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm transition-colors"
               />
-              <p className="text-xs text-gray-400">We'll send a verification code via SMS</p>
+              <p className="text-xs text-gray-400">We'll send a verification code to this number via WhatsApp</p>
             </div>
           </div>
 

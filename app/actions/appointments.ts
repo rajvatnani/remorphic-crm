@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { sendSMS, visitThankYouMessage, appointmentConfirmMessage } from '@/lib/sms'
+import { sendWhatsApp, visitThankYouMessage, appointmentConfirmMessage } from '@/lib/whatsapp'
 
 export async function bookAppointment(formData: FormData) {
   const supabase = await createClient()
@@ -47,7 +47,7 @@ export async function bookAppointment(formData: FormData) {
     .single()
 
   if (customer) {
-    await sendSMS(
+    await sendWhatsApp(
       customer.phone,
       appointmentConfirmMessage(customer.name, business.name, appointmentDate, slotTime)
     )
@@ -99,7 +99,7 @@ export async function confirmAppointment(appointmentId: string) {
     .single()
 
   if (customer) {
-    await sendSMS(
+    await sendWhatsApp(
       customer.phone,
       visitThankYouMessage(customer.name, business.name)
     )
@@ -149,7 +149,7 @@ export async function approveBooking(appointmentId: string) {
     const [h, m] = (appt.slot_time as string).split(':').map(Number)
     const period = h >= 12 ? 'PM' : 'AM'
     const fTime = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`
-    await sendSMS(
+    await sendWhatsApp(
       customer.phone,
       `Hi ${customer.name}! Your booking at *${business.name}* on ${fDate} at ${fTime} is confirmed ✅. See you then!`
     )
@@ -178,7 +178,7 @@ export async function declineBooking(appointmentId: string) {
 
   const customer = (appt as any).customers
   if (customer) {
-    await sendSMS(
+    await sendWhatsApp(
       customer.phone,
       `Hi ${customer.name}, unfortunately your booking request at *${business.name}* could not be accepted at this time. Please contact us to reschedule.`
     )

@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { sendSMS, visitThankYouMessage } from '@/lib/sms'
+import { sendWhatsApp, visitThankYouMessage } from '@/lib/whatsapp'
 
 export async function addVisit(formData: FormData) {
   const supabase = await createClient()
@@ -31,7 +31,7 @@ export async function addVisit(formData: FormData) {
     .single()
 
   if (customer) {
-    await sendSMS(customer.phone, visitThankYouMessage(customer.name, business.name))
+    await sendWhatsApp(customer.phone, visitThankYouMessage(customer.name, business.name))
   }
 
   revalidatePath('/dashboard')
@@ -68,7 +68,7 @@ export async function addCustomerAndVisit(formData: FormData) {
   if (visitError) throw new Error(visitError.message)
 
   // Send SMS thank-you
-  await sendSMS(customerPhone, visitThankYouMessage(customerName, business.name))
+  await sendWhatsApp(customerPhone, visitThankYouMessage(customerName, business.name))
 
   revalidatePath('/dashboard')
   revalidatePath('/customers')
