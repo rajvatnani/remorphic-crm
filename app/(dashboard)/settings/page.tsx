@@ -20,6 +20,7 @@ export default function SettingsPage() {
   const [businessName, setBusinessName] = useState('')
   const [businessType, setBusinessType] = useState<BusinessType>('other')
   const [inactiveThresholdDays, setInactiveThresholdDays] = useState('60')
+  const [businessPhone, setBusinessPhone] = useState('')
   const [businessSlug, setBusinessSlug] = useState('')
   const [urlCopied, setUrlCopied] = useState(false)
   const [profilePending, setProfilePending] = useState(false)
@@ -62,6 +63,7 @@ export default function SettingsPage() {
       if (!biz) return
       setBusinessName(biz.name)
       setBusinessType(biz.type as BusinessType)
+      setBusinessPhone(biz.phone ?? '')
       setInactiveThresholdDays(String(biz.inactive_threshold_days))
       setBusinessSlug(biz.slug ?? '')
 
@@ -102,7 +104,7 @@ export default function SettingsPage() {
     const supabase = createClient()
     const { error } = await supabase
       .from('businesses')
-      .update({ name: businessName.trim(), type: businessType, inactive_threshold_days: threshold })
+      .update({ name: businessName.trim(), type: businessType, phone: businessPhone.trim(), inactive_threshold_days: threshold })
       .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
     if (error) {
       setProfileError(error.message)
@@ -192,6 +194,21 @@ export default function SettingsPage() {
                 onChange={e => setBusinessName(e.target.value)}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="business_phone">Owner WhatsApp Number</Label>
+              <Input
+                id="business_phone"
+                type="tel"
+                value={businessPhone}
+                onChange={e => setBusinessPhone(e.target.value)}
+                placeholder="+1 555 000 0000"
+                required
+              />
+              <p className="text-xs text-gray-400">
+                Receives a WhatsApp notification when someone books from your public booking page.
+              </p>
             </div>
 
             <div className="space-y-2">
