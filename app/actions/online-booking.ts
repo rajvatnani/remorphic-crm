@@ -2,19 +2,13 @@
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendWhatsApp } from '@/lib/whatsapp'
+import { normalizePhone } from '@/lib/phone'
 
 function adminClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
-}
-
-function normalizePhone(phone: string): string {
-  const cleaned = phone.replace(/[\s\-\(\)]/g, '')
-  if (cleaned.startsWith('+')) return cleaned
-  if (cleaned.startsWith('0')) return `+91${cleaned.slice(1)}`
-  return `+91${cleaned}`
 }
 
 export async function getPublicBookingData(slug: string) {

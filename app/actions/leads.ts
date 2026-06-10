@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { normalizePhone } from '@/lib/phone'
 
 async function getBusiness(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: business } = await supabase.from('businesses').select('id').single()
@@ -21,7 +22,7 @@ export async function addLead(formData: FormData) {
   const { error } = await supabase.from('leads').insert({
     business_id: business.id,
     name: name.trim(),
-    phone: phone.trim(),
+    phone: normalizePhone(phone),
     interest,
     status,
   })
@@ -44,7 +45,7 @@ export async function updateLead(leadId: string, formData: FormData) {
     .from('leads')
     .update({
       name: name.trim(),
-      phone: phone.trim(),
+      phone: normalizePhone(phone),
       interest,
       status,
     })
