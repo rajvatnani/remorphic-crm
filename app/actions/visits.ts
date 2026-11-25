@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { normalizePhone } from '@/lib/phone'
 import { sendWhatsApp, visitThankYouMessage } from '@/lib/whatsapp'
 
 export async function addVisit(formData: FormData) {
@@ -47,7 +48,7 @@ export async function addCustomerAndVisit(formData: FormData) {
   if (!business) throw new Error('No business found')
 
   const customerName = (formData.get('new_customer_name') as string).trim()
-  const customerPhone = (formData.get('new_customer_phone') as string).trim()
+  const customerPhone = normalizePhone(formData.get('new_customer_phone') as string)
 
   const { data: customer, error: customerError } = await supabase
     .from('customers')

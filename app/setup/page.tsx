@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { normalizePhone } from '@/lib/phone'
 import { INACTIVE_THRESHOLDS } from '@/types'
 import type { BusinessType } from '@/types'
 
@@ -33,22 +34,15 @@ export default function SetupPage() {
       return
     }
 
-    const rawSlug = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, '-').substring(0, 40)
-    const slug = rawSlug + '-' + Math.random().toString(36).substring(2, 8)
-
-    const { data: business, error } = await supabase
-      .from('businesses')
-      .insert({
-        name,
-        type,
-        owner_name: ownerName,
-        phone,
-        user_id: user.id,
-        inactive_threshold_days: INACTIVE_THRESHOLDS[type],
-        slug,
-      })
-      .select('id')
-      .single()
+    // Creates the business and its first member together. Row-level security
+    // blocks doing this as two inserts from the browser.
+    const { error } = await supabase.rpc('create_business', {
+      p_name: name,
+      p_type: type,
+      p_owner_name: ownerName,
+      p_phone: normalizePhone(phone),
+      p_inactive_threshold_days: INACTIVE_THRESHOLDS[type],
+    })
 
     if (error) {
       setError(error.message)
@@ -56,17 +50,8 @@ export default function SetupPage() {
       return
     }
 
-    // Add creator to business_users so all members share one table
-    await supabase.from('business_users').insert({
-      business_id: business.id,
-      user_id: user.id,
-      email: user.email ?? '',
-    })
-
-    if (true) {
-      router.push('/dashboard')
-      router.refresh()
-    }
+    router.push('/dashboard')
+    router.refresh()
   }
 
   return (

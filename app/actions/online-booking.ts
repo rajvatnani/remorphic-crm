@@ -1,8 +1,17 @@
 'use server'
 
+import { createHmac, randomInt } from 'node:crypto'
+import { headers } from 'next/headers'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { sendWhatsApp } from '@/lib/whatsapp'
-import { normalizePhone } from '@/lib/phone'
+import { normalizePhone, isValidPhone } from '@/lib/phone'
+
+const UUID_RE = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const SLOT_RE = /^([01]\d|2[0-3]):[0-5]\d$/
+
+const SEND_FAILED = 'Could not send code. Please try again.'
+const BOOKING_FAILED = 'Failed to save booking. Please try again.'
 
 function adminClient() {
   return createSupabaseClient(
@@ -11,11 +20,20 @@ function adminClient() {
   )
 }
 
+// Keyed, so a leaked booking_otps table cannot be brute-forced offline
+function keyedHash(value: string) {
+  return createHmac('sha256', process.env.SUPABASE_SERVICE_ROLE_KEY!).update(value).digest('hex')
+}
+
+function hashCode(businessId: string, phone: string, code: string) {
+  return keyedHash(`otp:${businessId.toLowerCase()}:${phone}:${code}`)
+}
+
 export async function getPublicBookingData(slug: string) {
   const admin = adminClient()
   const { data: business } = await admin
     .from('businesses')
-    .select('id, name, type, slug, phone')
+    .select('id, name, type, slug')
     .eq('slug', slug)
     .single()
   if (!business) return null
@@ -53,140 +71,129 @@ export async function sendBookingOtp(
   phone: string,
   businessId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const admin = adminClient()
-  const normalizedPhone = normalizePhone(phone)
-  const code = String(Math.floor(100000 + Math.random() * 900000))
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+  const normalizedPhone = normalizePhone(String(phone))
+  if (!isValidPhone(normalizedPhone)) {
+    return { ok: false, error: 'Please enter a valid phone number.' }
+  }
+  if (!UUID_RE.test(String(businessId))) return { ok: false, error: SEND_FAILED }
 
-  await admin.from('booking_otps').delete()
-    .eq('phone', normalizedPhone)
-    .eq('business_id', businessId)
+  const code = String(randomInt(100000, 1000000))
+  const ip = (await headers()).get('x-forwarded-for')?.split(',')[0].trim()
 
-  const { error } = await admin.from('booking_otps').insert({
-    phone: normalizedPhone,
-    business_id: businessId,
-    code,
-    expires_at: expiresAt,
+  const { data: result, error } = await adminClient().rpc('request_booking_otp', {
+    p_business_id: businessId,
+    p_phone: normalizedPhone,
+    p_code_hash: hashCode(businessId, normalizedPhone, code),
+    p_ip_hash: ip ? keyedHash(`ip:${ip}`) : null,
   })
 
-  if (error) return { ok: false, error: 'Could not send code. Please try again.' }
+  if (error) {
+    console.error('[Booking] request_booking_otp failed:', error.code)
+    return { ok: false, error: SEND_FAILED }
+  }
+  if (result === 'cooldown') {
+    return { ok: false, error: 'Please wait a minute before requesting another code.' }
+  }
+  if (result === 'limited') {
+    return { ok: false, error: 'Too many codes requested. Please try again in an hour.' }
+  }
+  if (result !== 'ok') return { ok: false, error: SEND_FAILED }
 
-  await sendWhatsApp(
+  const sent = await sendWhatsApp(
     normalizedPhone,
     `Your booking code is: *${code}*\n\nExpires in 10 minutes.`
   )
-  return { ok: true }
+  return sent ? { ok: true } : { ok: false, error: SEND_FAILED }
 }
 
-export async function verifyBookingOtp(
-  phone: string,
-  code: string,
-  businessId: string
-): Promise<{ ok: boolean; error?: string }> {
-  const admin = adminClient()
-  const normalizedPhone = normalizePhone(phone)
-
-  const { data: otp } = await admin
-    .from('booking_otps')
-    .select('id, code, expires_at')
-    .eq('phone', normalizedPhone)
-    .eq('business_id', businessId)
-    .eq('verified', false)
-    .single()
-
-  if (!otp) return { ok: false, error: 'No pending code found. Please request a new one.' }
-
-  if (new Date(otp.expires_at) < new Date()) {
-    await admin.from('booking_otps').delete().eq('id', otp.id)
-    return { ok: false, error: 'Code expired. Please request a new one.' }
-  }
-  if (otp.code !== code.trim()) return { ok: false, error: 'Incorrect code. Please try again.' }
-
-  await admin.from('booking_otps').update({ verified: true }).eq('id', otp.id)
-  return { ok: true }
+const BOOKING_ERRORS: Record<string, string> = {
+  no_code: 'No pending code found. Please request a new one.',
+  expired: 'Code expired. Please request a new one.',
+  locked: 'Too many incorrect attempts. Please request a new code.',
+  incorrect: 'Incorrect code. Please try again.',
+  closed: 'The business is closed on that day. Please pick another date.',
+  past: 'That time has already passed. Please pick another slot.',
+  invalid_slot: 'That time is not available. Please pick another slot.',
+  full: 'That slot was just taken. Please pick another one.',
 }
 
+const SLOT_ERRORS = ['closed', 'past', 'invalid_slot', 'full']
+
+/**
+ * Public endpoint: everything from the browser is untrusted. The code, opening
+ * hours and slot capacity are all checked in one database transaction, and the
+ * owner's phone is looked up here rather than accepted as an argument.
+ */
 export async function createOnlineBooking({
   businessId,
-  businessName,
-  businessPhone,
   name,
   phone,
+  code,
   date,
   slot,
 }: {
   businessId: string
-  businessName: string
-  businessPhone: string
   name: string
   phone: string
+  code: string
   date: string
   slot: string
-}): Promise<{ ok: boolean; error?: string }> {
-  const admin = adminClient()
-  const normalizedPhone = normalizePhone(phone)
+}): Promise<{ ok: boolean; error?: string; slotUnavailable?: boolean }> {
+  const normalizedPhone = normalizePhone(String(phone))
+  // Collapse whitespace so a name cannot add lines to the owner's message
+  const cleanName = String(name).replace(/\s+/g, ' ').trim().slice(0, 80)
 
-  const { data: otp } = await admin
-    .from('booking_otps')
-    .select('id')
-    .eq('phone', normalizedPhone)
-    .eq('business_id', businessId)
-    .eq('verified', true)
-    .gte('expires_at', new Date().toISOString())
-    .single()
-
-  if (!otp) return { ok: false, error: 'Phone verification expired. Please start over.' }
-
-  let customerId: string
-  const { data: existing } = await admin
-    .from('customers')
-    .select('id, name')
-    .eq('business_id', businessId)
-    .eq('phone', normalizedPhone)
-    .single()
-
-  if (existing) {
-    customerId = existing.id
-  } else {
-    const { data: newCustomer, error: ce } = await admin
-      .from('customers')
-      .insert({ business_id: businessId, name: name.trim(), phone: normalizedPhone })
-      .select('id')
-      .single()
-    if (ce) return { ok: false, error: 'Failed to save your info. Please try again.' }
-    customerId = newCustomer.id
+  if (!cleanName) return { ok: false, error: 'Please enter your name.' }
+  if (
+    !UUID_RE.test(String(businessId)) ||
+    !DATE_RE.test(String(date)) ||
+    !SLOT_RE.test(String(slot)) ||
+    !isValidPhone(normalizedPhone)
+  ) {
+    return { ok: false, error: BOOKING_FAILED }
   }
 
-  const nameNote =
-    existing && existing.name.toLowerCase() !== name.trim().toLowerCase()
-      ? `Booked online as: ${name.trim()}`
-      : null
-
-  const { error: ae } = await admin.from('appointments').insert({
-    business_id: businessId,
-    customer_id: customerId,
-    service: 'Appointment',
-    appointment_date: date,
-    slot_time: slot,
-    status: 'pending',
-    notes: nameNote,
+  const admin = adminClient()
+  const { data: result, error } = await admin.rpc('create_online_booking', {
+    p_business_id: businessId,
+    p_phone: normalizedPhone,
+    p_code_hash: hashCode(businessId, normalizedPhone, String(code).trim()),
+    p_name: cleanName,
+    p_date: date,
+    p_slot: slot,
   })
 
-  if (ae) return { ok: false, error: 'Failed to save booking. Please try again.' }
+  if (error) {
+    console.error('[Booking] create_online_booking failed:', error.code)
+    return { ok: false, error: BOOKING_FAILED }
+  }
+  if (result !== 'ok') {
+    return {
+      ok: false,
+      error: BOOKING_ERRORS[result] ?? BOOKING_FAILED,
+      slotUnavailable: SLOT_ERRORS.includes(result),
+    }
+  }
 
-  await admin.from('booking_otps').delete().eq('id', otp.id)
+  const { data: business } = await admin
+    .from('businesses')
+    .select('phone')
+    .eq('id', businessId)
+    .single()
 
-  const fDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
-    weekday: 'short', month: 'short', day: 'numeric',
-  })
-  const [h, m] = slot.split(':').map(Number)
-  const period = h >= 12 ? 'PM' : 'AM'
-  const fTime = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`
+  if (business?.phone) {
+    const fDate = new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+    })
+    const [h, m] = slot.split(':').map(Number)
+    const period = h >= 12 ? 'PM' : 'AM'
+    const fTime = `${h % 12 || 12}:${String(m).padStart(2, '0')} ${period}`
 
-  await sendWhatsApp(
-    businessPhone,
-    `📅 New booking request!\n\n*${existing?.name ?? name.trim()}* (${normalizedPhone}) wants to book on *${fDate} at ${fTime}*.\n\nOpen Remorphic CRM to approve or decline.`
-  )
+    await sendWhatsApp(
+      business.phone,
+      `📅 New booking request!\n\n*${cleanName}* (${normalizedPhone}) wants to book on *${fDate} at ${fTime}*.\n\nOpen Remorphic CRM to approve or decline.`
+    )
+  }
 
   return { ok: true }
 }
