@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { deleteCustomer } from '@/app/actions/customers'
+import { deleteCustomer, nudgeCustomer } from '@/app/actions/customers'
 import EditCustomerDialog from './edit-customer-dialog'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { SortableHead, toggleSort, type SortState } from '@/components/ui/sortable-table-head'
-import { Search, Trash2 } from 'lucide-react'
+import { Search, Trash2, MessageCircle, CheckCircle, PlusCircle } from 'lucide-react'
 
 interface CustomerRow {
   id: string
@@ -25,6 +25,13 @@ interface CustomerRow {
   lastVisit: string | null
   isActive: boolean
   totalVisits: number
+  nudgeSentAt: string | null
+}
+
+function nudgeCooldownDaysLeft(nudgeSentAt: string | null): number {
+  if (!nudgeSentAt) return 0
+  const daysSince = (Date.now() - new Date(nudgeSentAt).getTime()) / (1000 * 60 * 60 * 24)
+  return Math.max(0, Math.ceil(7 - daysSince))
 }
 
 function formatDate(dateStr: string | null) {
@@ -48,8 +55,21 @@ export default function CustomerList({ customers, label }: { customers: Customer
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [nudgingId, setNudgingId] = useState<string | null>(null)
   const [sort, setSort] = useState<SortState<SortKey>>({ key: 'name', direction: 'asc' })
   const router = useRouter()
+
+  async function handleNudge(customerId: string, customerName: string) {
+    if (!window.confirm(`Send a WhatsApp nudge to ${customerName}?`)) return
+    setNudgingId(customerId)
+    const result = await nudgeCustomer(customerId)
+    setNudgingId(null)
+    if (result.ok) {
+      router.refresh()
+    } else if (result.error) {
+      alert(result.error)
+    }
+  }
 
   async function handleDelete(id: string, name: string) {
     if (!window.confirm(`Delete ${name}? This will also remove their visit history. This cannot be undone.`)) {
@@ -164,16 +184,42 @@ export default function CustomerList({ customers, label }: { customers: Customer
                 </TableCell>
                 <TableCell className="text-center text-gray-600">{row.totalVisits}</TableCell>
                 <TableCell className="text-right">
-                  <Link
-                    href={`/customers/${row.id}`}
-                    className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-orange-50"
-                    style={{ color: '#F15A24', borderColor: '#F15A24' }}
-                  >
-                    View Visits →
-                  </Link>
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Link
+                      href={`/add-visit?customerId=${row.id}&name=${encodeURIComponent(row.name)}`}
+                      className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-50"
+                      title="Log walk-in visit"
+                    >
+                      <PlusCircle className="h-3.5 w-3.5" /> Log Visit
+                    </Link>
+                    <Link
+                      href={`/customers/${row.id}`}
+                      className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-orange-50"
+                      style={{ color: '#F15A24', borderColor: '#F15A24' }}
+                    >
+                      View Visits →
+                    </Link>
+                  </div>
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
+                    {(() => {
+                      const daysLeft = nudgeCooldownDaysLeft(row.nudgeSentAt)
+                      const blocked = daysLeft > 0
+                      return (
+                        <button
+                          onClick={() => handleNudge(row.id, row.name)}
+                          disabled={nudgingId === row.id || blocked}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+                          title={blocked ? `Nudge sent — available again in ${daysLeft} day${daysLeft === 1 ? '' : 's'}` : 'Send WhatsApp nudge'}
+                        >
+                          {blocked
+                            ? <CheckCircle className="h-4 w-4 text-green-500" />
+                            : <MessageCircle className="h-4 w-4" />
+                          }
+                        </button>
+                      )
+                    })()}
                     <EditCustomerDialog customer={row} label={label} />
                     <button
                       onClick={() => handleDelete(row.id, row.name)}

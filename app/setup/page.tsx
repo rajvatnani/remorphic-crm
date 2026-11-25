@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -8,17 +8,24 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { INACTIVE_THRESHOLDS } from '@/types'
-import type { BusinessType } from '@/types'
+import type { BusinessTypeRecord } from '@/types'
 
 export default function SetupPage() {
   const [name, setName] = useState('')
-  const [type, setType] = useState<BusinessType>('other')
+  const [type, setType] = useState('other')
   const [ownerName, setOwnerName] = useState('')
   const [phone, setPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [businessTypes, setBusinessTypes] = useState<BusinessTypeRecord[]>([])
   const router = useRouter()
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('business_types').select('*').order('label').then(({ data }) => {
+      if (data) setBusinessTypes(data)
+    })
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -33,6 +40,7 @@ export default function SetupPage() {
       return
     }
 
+    const selectedType = businessTypes.find(t => t.id === type)
     const rawSlug = name.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, '-').substring(0, 40)
     const slug = rawSlug + '-' + Math.random().toString(36).substring(2, 8)
 
@@ -44,7 +52,8 @@ export default function SetupPage() {
         owner_name: ownerName,
         phone,
         user_id: user.id,
-        inactive_threshold_days: INACTIVE_THRESHOLDS[type],
+        inactive_threshold_days: selectedType?.inactive_threshold_days ?? 60,
+        customer_label: selectedType?.customer_label ?? 'Customer',
         slug,
       })
       .select('id')
@@ -95,15 +104,14 @@ export default function SetupPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="type">Business Type</Label>
-              <Select value={type} onValueChange={(v) => { if (v !== null) setType(v as BusinessType) }}>
+              <Select value={type} onValueChange={v => { if (v) setType(v) }}>
                 <SelectTrigger id="type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="clinic">Clinic / Healthcare</SelectItem>
-                  <SelectItem value="salon">Salon / Beauty</SelectItem>
-                  <SelectItem value="gym">Gym / Fitness</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
+                  {businessTypes.map(bt => (
+                    <SelectItem key={bt.id} value={bt.id}>{bt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

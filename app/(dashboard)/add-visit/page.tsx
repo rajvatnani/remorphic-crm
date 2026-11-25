@@ -10,7 +10,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import type { Business, Customer } from '@/types'
-import { CUSTOMER_LABELS } from '@/types'
 import { Search, X } from 'lucide-react'
 
 function todayDate() {
@@ -42,6 +41,15 @@ export default function AddVisitPage() {
         .eq('business_id', biz.id)
         .order('name')
       setCustomers(custs ?? [])
+
+      const params = new URLSearchParams(window.location.search)
+      const preId = params.get('customerId')
+      const preName = params.get('name')
+      if (preId && preName) {
+        setCustomerId(preId)
+        setSelectedName(preName)
+        setQuery(preName)
+      }
     }
     load()
   }, [])
@@ -57,7 +65,7 @@ export default function AddVisitPage() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const label = business ? CUSTOMER_LABELS[business.type as keyof typeof CUSTOMER_LABELS] : 'Customer'
+  const label = business?.customer_label ?? 'Customer'
 
   const filtered = query.trim().length > 0
     ? customers.filter(c =>
@@ -90,7 +98,9 @@ export default function AddVisitPage() {
       } else {
         await addVisit(fd)
       }
-    } catch (err) {
+    } catch (err: any) {
+      // Re-throw Next.js redirect errors so the framework handles navigation
+      if (err?.digest?.startsWith('NEXT_REDIRECT')) throw err
       setError(err instanceof Error ? err.message : 'Something went wrong')
       setPending(false)
     }

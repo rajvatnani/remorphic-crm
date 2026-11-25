@@ -1,15 +1,22 @@
-export type BusinessType = 'clinic' | 'salon' | 'gym' | 'other'
+export interface BusinessTypeRecord {
+  id: string
+  label: string
+  customer_label: string
+  inactive_threshold_days: number
+  emoji: string
+}
 
 export interface Business {
   id: string
   name: string
-  type: BusinessType
+  type: string
   owner_name: string
   phone: string
   created_at: string
   user_id: string
   inactive_threshold_days: number
   slug: string
+  customer_label: string
 }
 
 export interface Customer {
@@ -52,6 +59,7 @@ export interface Appointment {
   status: 'pending' | 'scheduled' | 'confirmed' | 'cancelled'
   notes: string | null
   visit_id: string | null
+  payment_screenshot: string | null
   created_at: string
 }
 
@@ -103,19 +111,5 @@ export const INTERACTION_TYPES: { value: InteractionType; label: string }[] = [
   { value: 'follow_up', label: 'Follow-up' },
   { value: 'other', label: 'Other' },
 ]
-
-export const CUSTOMER_LABELS: Record<BusinessType, string> = {
-  clinic: 'Patient',
-  salon: 'Client',
-  gym: 'Member',
-  other: 'Customer',
-}
-
-export const INACTIVE_THRESHOLDS: Record<BusinessType, number> = {
-  clinic: 90,
-  salon: 45,
-  gym: 30,
-  other: 60,
-}
 
 export const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']

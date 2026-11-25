@@ -1,6 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { getBusinessContext } from '@/lib/get-business-context'
 import { notFound } from 'next/navigation'
-import { CUSTOMER_LABELS } from '@/types'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -22,10 +21,9 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
-
-  const { data: business } = await supabase.from('businesses').select('*').single()
-  if (!business) return null
+  const ctx = await getBusinessContext()
+  if (!ctx) return null
+  const { supabase, business } = ctx
 
   const { data: customer } = await supabase
     .from('customers')
@@ -44,7 +42,7 @@ export default async function CustomerDetailPage({
     .order('visited_at', { ascending: false })
 
   const threshold = business.inactive_threshold_days
-  const label = CUSTOMER_LABELS[business.type as keyof typeof CUSTOMER_LABELS]
+  const label = business.customer_label ?? 'Customer'
 
   const thresholdDate = new Date()
   thresholdDate.setDate(thresholdDate.getDate() - threshold)
@@ -130,7 +128,7 @@ export default async function CustomerDetailPage({
           <p className="text-center py-12 text-gray-400 text-sm">No visits recorded yet.</p>
         ) : (
           <div className="divide-y divide-gray-100">
-            {visits.map(visit => (
+            {(visits ?? []).map((visit: any) => (
               <div key={visit.id} className="px-4 py-4">
                 <div className="flex items-start justify-between">
                   <div>

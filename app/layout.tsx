@@ -15,7 +15,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Remorphic CRM",
+  title: "Custozo by Remorphic",
   description: "Customer retention platform",
 };
 

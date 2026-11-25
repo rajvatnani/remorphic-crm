@@ -1,17 +1,15 @@
-import { createClient } from '@/lib/supabase/server'
-import { CUSTOMER_LABELS } from '@/types'
+import { getBusinessContext } from '@/lib/get-business-context'
 import AddCustomerDialog from './add-customer-dialog'
 import CustomerList from './customer-list'
 import ExportCsvButton from '@/components/export-csv-button'
 
 export default async function CustomersPage() {
-  const supabase = await createClient()
-
-  const { data: business } = await supabase.from('businesses').select('*').single()
-  if (!business) return null
+  const ctx = await getBusinessContext()
+  if (!ctx) return null
+  const { supabase, business } = ctx
 
   const threshold = business.inactive_threshold_days
-  const label = CUSTOMER_LABELS[business.type as keyof typeof CUSTOMER_LABELS]
+  const label = business.customer_label ?? 'Customer'
 
   const thresholdDate = new Date()
   thresholdDate.setDate(thresholdDate.getDate() - threshold)
@@ -19,11 +17,11 @@ export default async function CustomersPage() {
 
   const { data: customers } = await supabase
     .from('customers')
-    .select('id, name, phone, gender, dob, created_at, visits(visited_at)')
+    .select('id, name, phone, gender, dob, created_at, nudge_sent_at, visits(visited_at)')
     .eq('business_id', business.id)
     .order('created_at', { ascending: false })
 
-  const rows = (customers ?? []).map(c => {
+  const rows = (customers ?? []).map((c: any) => {
     const customerVisits = c.visits as { visited_at: string }[]
     const lastVisit = customerVisits.length
       ? customerVisits.reduce((latest, v) =>
@@ -41,10 +39,11 @@ export default async function CustomersPage() {
       lastVisit,
       isActive,
       totalVisits: customerVisits.length,
+      nudgeSentAt: (c.nudge_sent_at as string | null) ?? null,
     }
   })
 
-  const csvRows = rows.map(c => [
+  const csvRows = rows.map((c: any) => [
     c.name,
     c.phone,
     c.gender ? c.gender.charAt(0).toUpperCase() + c.gender.slice(1) : '',

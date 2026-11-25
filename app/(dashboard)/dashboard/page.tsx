@@ -1,6 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { getBusinessContext } from '@/lib/get-business-context'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { CUSTOMER_LABELS } from '@/types'
 import { Users, UserCheck, UserX, CalendarDays, UserPlus, Activity, Handshake, BellRing } from 'lucide-react'
 
 function localDateStr(d: Date) {
@@ -11,13 +10,12 @@ function localDateStr(d: Date) {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-
-  const { data: business } = await supabase.from('businesses').select('*').single()
-  if (!business) return null
+  const ctx = await getBusinessContext()
+  if (!ctx) return null
+  const { supabase, business } = ctx
 
   const threshold = business.inactive_threshold_days
-  const label = CUSTOMER_LABELS[business.type as keyof typeof CUSTOMER_LABELS]
+  const label = business.customer_label ?? 'Customer'
 
   const thresholdDate = new Date()
   thresholdDate.setDate(thresholdDate.getDate() - threshold)
@@ -74,8 +72,8 @@ export default async function DashboardPage() {
   const totalCustomers = customers?.length ?? 0
 
   const totalLeads = leads?.length ?? 0
-  const openLeads = (leads ?? []).filter(l => l.status !== 'converted' && l.status !== 'lost').length
-  const convertedLeads = (leads ?? []).filter(l => l.status === 'converted').length
+  const openLeads = (leads ?? []).filter((l: any) => l.status !== 'converted' && l.status !== 'lost').length
+  const convertedLeads = (leads ?? []).filter((l: any) => l.status === 'converted').length
 
   const leadStats = [
     {
@@ -155,7 +153,7 @@ export default async function DashboardPage() {
           className="font-heading text-4xl font-extrabold italic hover:underline"
           style={{ color: '#F15A24' }}
         >
-          Trackly
+          Custozo
         </a>
       </div>
 

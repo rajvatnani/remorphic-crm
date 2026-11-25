@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { Business } from '@/types'
-import { CUSTOMER_LABELS } from '@/types'
 import { cn } from '@/lib/utils'
 import { LayoutDashboard, Users, UserPlus, CalendarDays, ClipboardList, Megaphone, Settings, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -12,7 +11,7 @@ import { useState } from 'react'
 export default function MobileNav({ business }: { business: Business }) {
   const pathname = usePathname()
   const router = useRouter()
-  const customerLabel = CUSTOMER_LABELS[business.type as keyof typeof CUSTOMER_LABELS] + 's'
+  const customerLabel = (business.customer_label ?? 'Customer') + 's'
   const [menuOpen, setMenuOpen] = useState(false)
 
   const navItems = [
@@ -33,7 +32,7 @@ export default function MobileNav({ business }: { business: Business }) {
 
   return (
     <>
-      <header className="md:hidden fixed top-0 inset-x-0 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-40">
+      <header className="md:hidden fixed top-0 inset-x-0 h-14 flex items-center justify-between px-4 z-40" style={{ backgroundColor: '#18181b' }}>
         <div className="flex items-center gap-2">
           <a
             href="https://remorphic.com"
@@ -45,24 +44,24 @@ export default function MobileNav({ business }: { business: Business }) {
           >
             <span className="text-white font-bold text-sm">R</span>
           </a>
-          <span className="font-semibold text-gray-900 text-sm truncate max-w-[160px]">
+          <span className="font-semibold text-white text-sm truncate max-w-[160px]">
             {business.name}
           </span>
         </div>
         <div className="flex items-center gap-1">
-          <Link href="/settings" className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+          <Link href="/settings" className="p-2 rounded-lg transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }}>
             <Settings className="h-5 w-5" />
           </Link>
           <button
             onClick={() => setMenuOpen(o => !o)}
-            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: 'rgba(255,255,255,0.5)' }}
           >
             <LogOut className="h-5 w-5" />
           </button>
         </div>
       </header>
 
-      {/* Sign-out confirmation */}
       {menuOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex items-end" onClick={() => setMenuOpen(false)}>
           <div className="w-full bg-white rounded-t-2xl shadow-xl p-4 pb-8" onClick={e => e.stopPropagation()}>
@@ -79,15 +78,12 @@ export default function MobileNav({ business }: { business: Business }) {
         </div>
       )}
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 flex z-40">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 flex z-40" style={{ backgroundColor: '#18181b', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
         {navItems.map(({ href, label, icon: Icon }) => (
           <Link key={href} href={href} className="flex-1">
             <span
-              className={cn(
-                'flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors',
-                pathname === href ? '' : 'text-gray-500'
-              )}
-              style={pathname === href ? { color: '#F15A24' } : {}}
+              className={cn('flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors')}
+              style={pathname === href ? { color: '#F15A24' } : { color: 'rgba(255,255,255,0.4)' }}
             >
               <Icon className="h-5 w-5" />
               {label}

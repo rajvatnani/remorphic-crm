@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getBusinessContext } from '@/lib/get-business-context'
 import { LEAD_STATUSES, INTERACTION_TYPES, type LeadStatus, type InteractionType } from '@/types'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -36,10 +36,9 @@ const TYPE_LABELS: Record<InteractionType, string> = Object.fromEntries(
 ) as Record<InteractionType, string>
 
 export default async function DueInteractionsPage() {
-  const supabase = await createClient()
-
-  const { data: business } = await supabase.from('businesses').select('*').single()
-  if (!business) return null
+  const ctx = await getBusinessContext()
+  if (!ctx) return null
+  const { supabase, business } = ctx
 
   const today = localDateStr(new Date())
 
@@ -50,7 +49,8 @@ export default async function DueInteractionsPage() {
     .eq('follow_up_date', today)
     .order('occurred_at', { ascending: false })
 
-  const rows = (interactions ?? []).flatMap(i => {
+  type DueRow = { id: string; type: InteractionType; notes: string | null; occurredAt: string; lead: { id: string; name: string; phone: string; status: LeadStatus } }
+  const rows: DueRow[] = (interactions ?? []).flatMap((i: any) => {
     const lead = i.leads as unknown as { id: string; name: string; phone: string; status: LeadStatus } | null
     if (!lead) return []
     return [{

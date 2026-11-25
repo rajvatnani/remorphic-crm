@@ -34,11 +34,20 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md shadow-sm">
-        <CardHeader className="text-center pb-4">
-          <div className="flex justify-center mb-4">
-            <Image src="/remorphic-logo.png" alt="Remorphic" width={646} height={140} className="h-10 w-auto" priority />
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: '#18181b' }}>
+      <Card className="w-full max-w-md border-0 overflow-hidden" style={{ boxShadow: '0 25px 60px rgba(0,0,0,0.4)' }}>
+        <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #F15A24, #ff8c5a)' }} />
+        <CardHeader className="text-center pb-4 pt-8">
+          <div className="flex flex-col items-center gap-2 mb-2">
+            <p className="text-4xl font-extrabold italic" style={{ color: '#F15A24' }}>Custozo</p>
+            <a
+              href="https://remorphic.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              by <Image src="/remorphic-logo.png" alt="Remorphic" width={646} height={140} className="h-6 w-auto" />
+            </a>
           </div>
           <CardDescription>Sign in to your business account</CardDescription>
         </CardHeader>

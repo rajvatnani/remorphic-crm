@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getBusinessContext } from '@/lib/get-business-context'
 import { notFound } from 'next/navigation'
 import { LEAD_STATUSES, type LeadStatus } from '@/types'
 import { Badge } from '@/components/ui/badge'
@@ -35,10 +35,9 @@ export default async function LeadDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = await createClient()
-
-  const { data: business } = await supabase.from('businesses').select('*').single()
-  if (!business) return null
+  const ctx = await getBusinessContext()
+  if (!ctx) return null
+  const { supabase, business } = ctx
 
   const { data: lead } = await supabase
     .from('leads')
@@ -56,7 +55,7 @@ export default async function LeadDetailPage({
     .eq('business_id', business.id)
     .order('occurred_at', { ascending: false })
 
-  const rows: InteractionRow[] = (interactions ?? []).map(i => ({
+  const rows: InteractionRow[] = (interactions ?? []).map((i: any) => ({
     id: i.id,
     type: i.type,
     notes: i.notes,

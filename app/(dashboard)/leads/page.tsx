@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getBusinessContext } from '@/lib/get-business-context'
 import Link from 'next/link'
 import { BellRing } from 'lucide-react'
 import AddLeadDialog from './add-lead-dialog'
@@ -18,10 +18,9 @@ function localDateStr(d: Date) {
 }
 
 export default async function LeadsPage() {
-  const supabase = await createClient()
-
-  const { data: business } = await supabase.from('businesses').select('*').single()
-  if (!business) return null
+  const ctx = await getBusinessContext()
+  if (!ctx) return null
+  const { supabase, business } = ctx
 
   const today = localDateStr(new Date())
 
@@ -38,7 +37,7 @@ export default async function LeadsPage() {
       .eq('follow_up_date', today),
   ])
 
-  const csvRows = (leads ?? []).map(l => [
+  const csvRows = (leads ?? []).map((l: any) => [
     l.name,
     l.phone,
     l.interest ?? '',

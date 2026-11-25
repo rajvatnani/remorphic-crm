@@ -9,6 +9,7 @@ import {
   approveBooking,
   declineBooking,
 } from '@/app/actions/appointments'
+import { getPaymentScreenshotUrl } from '@/app/actions/online-booking'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,7 +22,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import type { AppointmentConfig, AppointmentWithCustomer, Business } from '@/types'
-import { CUSTOMER_LABELS, DAY_NAMES } from '@/types'
+import { DAY_NAMES } from '@/types'
 import { ChevronLeft, ChevronRight, Plus, Check, X, Search, Clock } from 'lucide-react'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -262,8 +263,10 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = useState<AppointmentWithCustomer[]>([])
   const [customers, setCustomers] = useState<{ id: string; name: string; phone: string }[]>([])
   const [loading, setLoading] = useState(true)
+  const [configLoaded, setConfigLoaded] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const [dialogSlot, setDialogSlot] = useState<string | null>(null)
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
   const [actionPending, startTransition] = useTransition()
 
   const supabase = createClient()
@@ -282,6 +285,7 @@ export default function AppointmentsPage() {
     setConfig(cfg ?? null)
     setCustomers(custs ?? [])
     setPendingCount(pc ?? 0)
+    setConfigLoaded(true)
   }
 
   async function loadAppointments(d: string) {
@@ -301,7 +305,7 @@ export default function AppointmentsPage() {
   useEffect(() => { loadBase() }, [])
   useEffect(() => { loadAppointments(date) }, [date])
 
-  const label = business ? CUSTOMER_LABELS[business.type as keyof typeof CUSTOMER_LABELS] : 'Customer'
+  const label = business?.customer_label ?? 'Customer'
   const slots = config ? generateSlots(config) : []
   const dayOfWeek = getDayOfWeek(date)
   const isClosed = config ? !config.open_days.includes(dayOfWeek) : false
@@ -353,7 +357,7 @@ export default function AppointmentsPage() {
           <h1 className="font-heading text-3xl font-bold tracking-tight text-gray-900">Appointments</h1>
           <p className="text-sm text-gray-500 mt-1">{formatDate(date)}</p>
         </div>
-        {!config && (
+        {configLoaded && !config && (
           <a href="/settings" className="text-sm font-medium" style={{ color: '#F15A24' }}>
             ⚙ Configure slots first →
           </a>
@@ -402,8 +406,13 @@ export default function AppointmentsPage() {
         )}
       </div>
 
+      {/* Loading base config */}
+      {!configLoaded && (
+        <div className="py-12 text-center text-gray-400 text-sm">Loading…</div>
+      )}
+
       {/* No config */}
-      {!config && (
+      {configLoaded && !config && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
           <Clock className="h-8 w-8 text-amber-500 mx-auto mb-2" />
           <p className="font-medium text-amber-800">Appointment slots not configured</p>
@@ -414,7 +423,7 @@ export default function AppointmentsPage() {
       )}
 
       {/* Closed day */}
-      {config && isClosed && (
+      {configLoaded && config && isClosed && (
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
           <p className="font-medium text-gray-700">{DAY_NAMES[dayOfWeek]}s are marked as closed</p>
           <p className="text-sm text-gray-500 mt-1">No appointment slots available. You can still navigate to other days.</p>
@@ -422,7 +431,7 @@ export default function AppointmentsPage() {
       )}
 
       {/* Slots */}
-      {config && !isClosed && (
+      {configLoaded && config && !isClosed && (
         <div className="space-y-3">
           {loading && (
             <div className="py-12 text-center text-gray-400 text-sm">Loading…</div>
@@ -480,6 +489,18 @@ export default function AppointmentsPage() {
                             </p>
                             {appt.notes && (
                               <p className="text-xs text-gray-400 mt-0.5 italic">{appt.notes}</p>
+                            )}
+                            {appt.payment_screenshot && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const url = await getPaymentScreenshotUrl(appt.payment_screenshot!)
+                                  if (url) setScreenshotPreview(url)
+                                }}
+                                className="inline-flex items-center gap-1 mt-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"
+                              >
+                                💳 View payment screenshot
+                              </button>
                             )}
                           </div>
                         </div>
@@ -549,6 +570,22 @@ export default function AppointmentsPage() {
         label={label}
         onBooked={() => loadAppointments(date)}
       />
+
+      {/* Payment screenshot preview dialog */}
+      <Dialog open={screenshotPreview !== null} onOpenChange={(open) => { if (!open) setScreenshotPreview(null) }}>
+        <DialogContent className="max-w-2xl p-4">
+          <DialogHeader>
+            <DialogTitle>Payment Screenshot</DialogTitle>
+          </DialogHeader>
+          {screenshotPreview && (
+            <img
+              src={screenshotPreview}
+              alt="Payment screenshot"
+              className="w-full rounded-lg object-contain max-h-[70vh]"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

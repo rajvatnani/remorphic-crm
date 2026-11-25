@@ -15,18 +15,54 @@ export async function getPublicBookingData(slug: string) {
   const admin = adminClient()
   const { data: business } = await admin
     .from('businesses')
-    .select('id, name, type, slug, phone')
+    .select('id, name, type, slug, phone, customer_label, address, photo, price_per_slot, payment_qr, services_offered')
     .eq('slug', slug)
     .single()
   if (!business) return null
 
-  const { data: config } = await admin
-    .from('appointment_config')
-    .select('slot_duration, max_per_slot, start_time, end_time, open_days')
-    .eq('business_id', business.id)
-    .single()
+  const [{ data: config }, { data: gallery }] = await Promise.all([
+    admin
+      .from('appointment_config')
+      .select('slot_duration, max_per_slot, start_time, end_time, open_days')
+      .eq('business_id', business.id)
+      .single(),
+    admin
+      .from('business_gallery')
+      .select('id, url')
+      .eq('business_id', business.id)
+      .order('created_at'),
+  ])
 
-  return { business, config }
+  return { business, config, gallery: gallery ?? [] }
+}
+
+export async function uploadPaymentScreenshot(
+  formData: FormData
+): Promise<{ url: string | null }> {
+  const file = formData.get('file') as File | null
+  if (!file) return { url: null }
+  const admin = adminClient()
+  const ext = file.name.split('.').pop() ?? 'jpg'
+  const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  const { error } = await admin.storage.from('payment-screenshots').upload(path, file)
+  if (error) return { url: null }
+  // Store the path, not the public URL — signed URLs are generated at view time
+  return { url: path }
+}
+
+export async function getPaymentScreenshotUrl(
+  stored: string
+): Promise<string | null> {
+  const admin = adminClient()
+  // Handle legacy records that stored a full URL instead of a path
+  const path = stored.startsWith('http')
+    ? (stored.match(/payment-screenshots\/(.+?)(\?|$)/)?.[1] ?? null)
+    : stored
+  if (!path) return stored
+  const { data } = await admin.storage
+    .from('payment-screenshots')
+    .createSignedUrl(path, 3600)
+  return data?.signedUrl ?? null
 }
 
 export async function getSlotAvailability(
@@ -114,6 +150,8 @@ export async function createOnlineBooking({
   phone,
   date,
   slot,
+  paymentScreenshot,
+  selectedServices,
 }: {
   businessId: string
   businessName: string
@@ -122,6 +160,8 @@ export async function createOnlineBooking({
   phone: string
   date: string
   slot: string
+  paymentScreenshot?: string | null
+  selectedServices?: string[]
 }): Promise<{ ok: boolean; error?: string }> {
   const admin = adminClient()
   const normalizedPhone = normalizePhone(phone)
@@ -137,14 +177,28 @@ export async function createOnlineBooking({
 
   if (!otp) return { ok: false, error: 'Phone verification expired. Please start over.' }
 
-  let customerId: string
-  const { data: existing } = await admin
+  // Validate the selected date is an open day
+  const { data: apptCfg } = await admin
+    .from('appointment_config')
+    .select('open_days')
+    .eq('business_id', businessId)
+    .single()
+  const dow = new Date(date + 'T00:00:00').getDay()
+  if (apptCfg && !(apptCfg.open_days as number[]).includes(dow)) {
+    return { ok: false, error: 'This day is not available for bookings.' }
+  }
+
+  // Match by last 10 digits to handle +91 prefix inconsistency
+  const last10 = normalizedPhone.replace(/\D/g, '').slice(-10)
+  const { data: existingRows } = await admin
     .from('customers')
     .select('id, name')
     .eq('business_id', businessId)
-    .eq('phone', normalizedPhone)
-    .single()
+    .ilike('phone', `%${last10}`)
+    .limit(1)
+  const existing = existingRows?.[0] ?? null
 
+  let customerId: string
   if (existing) {
     customerId = existing.id
   } else {
@@ -162,14 +216,17 @@ export async function createOnlineBooking({
       ? `Booked online as: ${name.trim()}`
       : null
 
+  const serviceValue = selectedServices?.length ? selectedServices.join(', ') : 'Appointment'
+
   const { error: ae } = await admin.from('appointments').insert({
     business_id: businessId,
     customer_id: customerId,
-    service: 'Appointment',
+    service: serviceValue,
     appointment_date: date,
     slot_time: slot,
     status: 'pending',
     notes: nameNote,
+    payment_screenshot: paymentScreenshot ?? null,
   })
 
   if (ae) return { ok: false, error: 'Failed to save booking. Please try again.' }

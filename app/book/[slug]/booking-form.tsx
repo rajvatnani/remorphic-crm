@@ -1,10 +1,8 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { getSlotAvailability, sendBookingOtp, verifyBookingOtp, createOnlineBooking } from '@/app/actions/online-booking'
-import { CUSTOMER_LABELS } from '@/types'
-import type { BusinessType } from '@/types'
-import { ChevronLeft, ChevronRight, CheckCircle, CalendarDays, Clock } from 'lucide-react'
+import { getSlotAvailability, sendBookingOtp, verifyBookingOtp, createOnlineBooking, uploadPaymentScreenshot } from '@/app/actions/online-booking'
+import { ChevronLeft, ChevronRight, CheckCircle, CalendarDays, Clock, MapPin, Upload } from 'lucide-react'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -41,11 +39,24 @@ function fmtDate(dateStr: string, opts: Intl.DateTimeFormatOptions) {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', opts)
 }
 
-const TYPE_EMOJI: Record<BusinessType, string> = {
+const TYPE_EMOJI: Record<string, string> = {
   clinic: '🏥',
   salon: '✂️',
   gym: '💪',
   other: '🏢',
+}
+
+const SLOT_GROUPS = [
+  { key: 'morning',   label: 'Morning',   emoji: '🌅', test: (h: number) => h >= 0  && h < 12 },
+  { key: 'afternoon', label: 'Afternoon', emoji: '☀️', test: (h: number) => h >= 12 && h < 17 },
+  { key: 'evening',   label: 'Evening',   emoji: '🌇', test: (h: number) => h >= 17 && h < 21 },
+  { key: 'night',     label: 'Night',     emoji: '🌙', test: (h: number) => h >= 21 },
+]
+
+function groupSlots(slots: string[]) {
+  return SLOT_GROUPS
+    .map(g => ({ ...g, slots: slots.filter(s => g.test(Number(s.split(':')[0]))) }))
+    .filter(g => g.slots.length > 0)
 }
 
 // ── component ────────────────────────────────────────────────────────────────
@@ -66,17 +77,37 @@ interface Business {
   type: string
   slug: string
   phone: string
+  customer_label: string | null
+  address: string | null
+  photo: string | null
+  price_per_slot: number | null
+  payment_qr: string | null
+  services_offered: string | null
+}
+
+interface GalleryPhoto {
+  id: string
+  url: string
 }
 
 export default function BookingForm({
   business,
   config,
+  gallery,
 }: {
   business: Business
   config: Config | null
+  gallery: GalleryPhoto[]
 }) {
   const today = localDateStr(new Date())
-  const [date, setDate] = useState(today)
+  const [date, setDate] = useState(() => {
+    if (!config) return today
+    for (let i = 0; i < 14; i++) {
+      const d = addDays(today, i)
+      if (config.open_days.includes(new Date(d + 'T00:00:00').getDay())) return d
+    }
+    return today
+  })
   const [weekOffset, setWeekOffset] = useState(0)
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null)
   const [slotCounts, setSlotCounts] = useState<Record<string, number>>({})
@@ -85,8 +116,23 @@ export default function BookingForm({
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [otpCode, setOtpCode] = useState('')
+  const [selectedServices, setSelectedServices] = useState<string[]>([])
+  const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState<string | null>(null)
+  const [screenshotUploading, setScreenshotUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+
+  async function handleScreenshotUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setScreenshotUploading(true)
+    const fd = new FormData()
+    fd.set('file', file)
+    const { url } = await uploadPaymentScreenshot(fd)
+    if (url) setPaymentScreenshotUrl(url)
+    setScreenshotUploading(false)
+    e.target.value = ''
+  }
 
   // Load slot availability when date changes
   useEffect(() => {
@@ -102,8 +148,17 @@ export default function BookingForm({
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-rose-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-sm border border-orange-100 p-10 max-w-sm w-full text-center">
-          <div className="text-5xl mb-4">{TYPE_EMOJI[business.type as BusinessType] ?? '🏢'}</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{business.name}</h1>
+          {business.photo ? (
+            <img src={business.photo} alt={business.name} className="w-20 h-20 rounded-full object-cover mx-auto mb-4 shadow-md" />
+          ) : (
+            <div className="text-5xl mb-4">{TYPE_EMOJI[business.type] ?? '🏢'}</div>
+          )}
+          <h1 className="text-2xl font-bold text-gray-900 mb-1">{business.name}</h1>
+          {business.address && (
+            <p className="flex items-center justify-center gap-1 text-gray-400 text-sm mb-2">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />{business.address}
+            </p>
+          )}
           <p className="text-gray-500">Online booking isn't available yet. Please contact us directly.</p>
         </div>
       </div>
@@ -170,13 +225,15 @@ export default function BookingForm({
         phone,
         date,
         slot: selectedSlot!,
+        paymentScreenshot: paymentScreenshotUrl,
+        selectedServices,
       })
       if (!bookRes.ok) { setError(bookRes.error ?? 'Booking failed.'); return }
       setStep('done')
     })
   }
 
-  const label = CUSTOMER_LABELS[business.type as BusinessType] ?? 'Customer'
+  const label = business.customer_label ?? 'Customer'
 
   // ── STEP: DONE ─────────────────────────────────────────────────────────────
   if (step === 'done') {
@@ -272,6 +329,67 @@ export default function BookingForm({
             </span>
           </div>
 
+          {/* Payment QR */}
+          {business.payment_qr && (
+            <div className="border border-orange-200 bg-orange-50 rounded-2xl p-4 mb-6">
+              <p className="text-sm font-semibold text-gray-800 mb-3">Pre-pay your booking fee</p>
+              <img src={business.payment_qr} alt="Payment QR" className="w-44 h-44 object-contain mx-auto rounded-xl bg-white p-2 mb-3" />
+              <p className="text-xs text-gray-500 text-center mb-4">Scan the QR code to pay your booking fee in advance</p>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-gray-700">
+                  Upload payment screenshot <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                {paymentScreenshotUrl ? (
+                  <div className="flex items-center gap-3 mt-1">
+                    <img src={paymentScreenshotUrl} alt="Payment proof" className="w-16 h-16 object-cover rounded-xl border border-orange-200" />
+                    <div>
+                      <p className="text-xs text-green-600 font-medium mb-1">✓ Screenshot uploaded</p>
+                      <button type="button" onClick={() => setPaymentScreenshotUrl(null)} className="text-xs text-gray-400 hover:text-red-500">Remove</button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-orange-200 rounded-2xl px-4 py-3 hover:bg-orange-50/50 transition-colors mt-1">
+                    <input type="file" accept="image/*" onChange={handleScreenshotUpload} className="hidden" disabled={screenshotUploading} />
+                    <Upload className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-500">{screenshotUploading ? 'Uploading…' : 'Tap to upload screenshot'}</span>
+                  </label>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Services */}
+          {(() => {
+            const services = (business.services_offered ?? '').split(',').map(s => s.trim()).filter(Boolean)
+            if (!services.length) return null
+            return (
+              <div className="mb-6">
+                <p className="text-sm font-medium text-gray-700 mb-2">Services <span className="text-gray-400 font-normal">(optional)</span></p>
+                <div className="flex flex-wrap gap-2">
+                  {services.map(svc => {
+                    const active = selectedServices.includes(svc)
+                    return (
+                      <button
+                        key={svc}
+                        type="button"
+                        onClick={() => setSelectedServices(prev =>
+                          prev.includes(svc) ? prev.filter(s => s !== svc) : [...prev, svc]
+                        )}
+                        className="px-4 py-2 rounded-2xl text-sm font-medium border-2 transition-all"
+                        style={active
+                          ? { backgroundColor: '#F15A24', borderColor: '#F15A24', color: '#fff' }
+                          : { backgroundColor: '#fff', borderColor: '#e5e7eb', color: '#374151' }
+                        }
+                      >
+                        {svc}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
+
           <div className="space-y-4 mb-6">
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-gray-700">Your name</label>
@@ -321,10 +439,40 @@ export default function BookingForm({
 
         {/* Business header */}
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">{TYPE_EMOJI[business.type as BusinessType] ?? '🏢'}</div>
+          {business.photo ? (
+            <img src={business.photo} alt={business.name} className="w-24 h-24 rounded-full object-cover mx-auto mb-3 shadow-md border-2 border-white" />
+          ) : (
+            <div className="text-5xl mb-3">{TYPE_EMOJI[business.type] ?? '🏢'}</div>
+          )}
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">{business.name}</h1>
-          <p className="text-gray-500 mt-1 text-sm">Pick a date and time below</p>
+          {business.address && (
+            <p className="flex items-center justify-center gap-1 text-gray-500 text-sm mt-1">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />{business.address}
+            </p>
+          )}
+          {business.price_per_slot != null && (
+            <span className="inline-block mt-2 text-xs font-semibold px-3 py-1 rounded-full bg-orange-100 text-[#F15A24]">
+              ₹{business.price_per_slot} per slot
+            </span>
+          )}
+          <p className="text-gray-400 mt-2 text-sm">Pick a date and time below</p>
         </div>
+
+        {/* Gallery */}
+        {gallery.length > 0 && (
+          <div className="mb-4">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {gallery.map(photo => (
+                <img
+                  key={photo.id}
+                  src={photo.url}
+                  alt="Gallery"
+                  className="w-44 h-32 object-cover rounded-2xl flex-shrink-0 shadow-sm"
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Date strip */}
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-4 mb-4">
@@ -393,41 +541,52 @@ export default function BookingForm({
             </span>
           </div>
 
-          {loadingSlots ? (
+          {isClosed(date) ? (
+            <p className="text-center text-gray-400 text-sm py-6">
+              {fmtDate(date, { weekday: 'long' })} is closed for bookings. Please pick another day.
+            </p>
+          ) : loadingSlots ? (
             <div className="grid grid-cols-3 gap-2">
               {Array.from({ length: 9 }).map((_, i) => (
                 <div key={i} className="h-11 rounded-2xl bg-gray-100 animate-pulse" />
               ))}
             </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-2">
-              {slots.map(slot => {
-                const count = slotCounts[slot] ?? 0
-                const full = count >= config.max_per_slot || isPastSlot(slot)
-                const chosen = slot === selectedSlot
-                return (
-                  <button
-                    key={slot}
-                    onClick={() => !full && handleSlotSelect(slot)}
-                    disabled={full}
-                    className={`h-11 rounded-2xl text-sm font-semibold transition-all ${
-                      chosen
-                        ? 'text-white shadow-md scale-[1.03]'
-                        : full
-                        ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                        : 'bg-white border-2 border-orange-200 text-gray-700 hover:border-[#F15A24] hover:bg-orange-50'
-                    }`}
-                    style={chosen ? { backgroundColor: '#F15A24' } : undefined}
-                  >
-                    {fmtSlot(slot)}
-                  </button>
-                )
-              })}
-            </div>
-          )}
-
-          {!loadingSlots && slots.length === 0 && (
+          ) : slots.length === 0 ? (
             <p className="text-center text-gray-400 text-sm py-4">No slots configured for this day.</p>
+          ) : (
+            <div className="space-y-5">
+              {groupSlots(slots).map(group => (
+                <div key={group.key}>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                    {group.emoji} {group.label}
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {group.slots.map(slot => {
+                      const count = slotCounts[slot] ?? 0
+                      const full = count >= config.max_per_slot || isPastSlot(slot)
+                      const chosen = slot === selectedSlot
+                      return (
+                        <button
+                          key={slot}
+                          onClick={() => !full && handleSlotSelect(slot)}
+                          disabled={full}
+                          className={`h-11 rounded-2xl text-sm font-semibold transition-all ${
+                            chosen
+                              ? 'text-white shadow-md scale-[1.03]'
+                              : full
+                              ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                              : 'bg-white border-2 border-orange-200 text-gray-700 hover:border-[#F15A24] hover:bg-orange-50'
+                          }`}
+                          style={chosen ? { backgroundColor: '#F15A24' } : undefined}
+                        >
+                          {fmtSlot(slot)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 
@@ -437,7 +596,7 @@ export default function BookingForm({
 
         <button
           onClick={handleContinueToDetails}
-          disabled={!selectedSlot}
+          disabled={!selectedSlot || isClosed(date)}
           className="w-full h-14 rounded-2xl text-white font-bold text-base shadow-lg transition-all disabled:opacity-40 disabled:shadow-none disabled:scale-100 hover:scale-[1.01] active:scale-[0.99]"
           style={{ backgroundColor: '#F15A24' }}
         >

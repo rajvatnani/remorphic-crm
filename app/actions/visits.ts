@@ -36,8 +36,10 @@ export async function addVisit(formData: FormData) {
 
   revalidatePath('/dashboard')
   revalidatePath('/customers')
+  revalidatePath('/visits')
+  revalidatePath(`/customers/${customerId}`)
   revalidatePath('/campaigns')
-  redirect('/dashboard')
+  redirect('/customers')
 }
 
 export async function addCustomerAndVisit(formData: FormData) {
@@ -72,6 +74,7 @@ export async function addCustomerAndVisit(formData: FormData) {
 
   revalidatePath('/dashboard')
   revalidatePath('/customers')
+  revalidatePath('/visits')
   revalidatePath('/campaigns')
-  redirect('/dashboard')
+  redirect('/customers')
 }

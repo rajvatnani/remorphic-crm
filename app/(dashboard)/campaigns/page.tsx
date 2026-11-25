@@ -13,7 +13,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { Business } from '@/types'
-import { CUSTOMER_LABELS } from '@/types'
 import { Copy, Check } from 'lucide-react'
 
 interface InactiveCustomer {
@@ -178,7 +177,7 @@ export default function CampaignsPage() {
     load()
   }, [])
 
-  const label = business ? CUSTOMER_LABELS[business.type] : 'Customer'
+  const label = business?.customer_label ?? 'Customer'
 
   const tab30 = allInactive.filter(c => c.daysInactive >= 30)
   const tab60 = allInactive.filter(c => c.daysInactive >= 60)

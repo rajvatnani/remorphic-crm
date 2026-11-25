@@ -10,5 +10,5 @@ export default async function BookPage({
   const { slug } = await params
   const data = await getPublicBookingData(slug)
   if (!data) return notFound()
-  return <BookingForm business={data.business} config={data.config} />
+  return <BookingForm business={data.business} config={data.config} gallery={data.gallery} />
 }

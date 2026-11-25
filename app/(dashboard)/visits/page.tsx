@@ -1,14 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
-import { CUSTOMER_LABELS } from '@/types'
+import { getBusinessContext } from '@/lib/get-business-context'
 import VisitLog from './visit-log'
 
 export default async function VisitsPage() {
-  const supabase = await createClient()
+  const ctx = await getBusinessContext()
+  if (!ctx) return null
+  const { supabase, business } = ctx
 
-  const { data: business } = await supabase.from('businesses').select('*').single()
-  if (!business) return null
-
-  const label = CUSTOMER_LABELS[business.type as keyof typeof CUSTOMER_LABELS]
+  const label = business.customer_label ?? 'Customer'
 
   const { data: visits } = await supabase
     .from('visits')
@@ -17,8 +15,8 @@ export default async function VisitsPage() {
     .order('visited_at', { ascending: false })
 
   const rows = (visits ?? [])
-    .filter(v => v.customers)
-    .map(v => {
+    .filter((v: any) => v.customers)
+    .map((v: any) => {
       const customer = v.customers as unknown as { id: string; name: string; phone: string }
       return {
         id: v.id,
