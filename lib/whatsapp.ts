@@ -1,4 +1,5 @@
 import twilio from 'twilio'
+import { normalizePhone } from '@/lib/phone'
 
 function getClient() {
   return twilio(
@@ -7,28 +8,21 @@ function getClient() {
   )
 }
 
-function normalizePhone(phone: string): string {
-  const cleaned = phone.replace(/[\s\-\(\)]/g, '')
-  return cleaned.startsWith('+') ? cleaned : `+${cleaned}`
-}
-
-export async function sendWhatsApp(to: string, body: string) {
+// Never log phone numbers or message bodies here: bodies include booking codes.
+// Twilio's error messages can quote the number, so log only the error code.
+export async function sendWhatsApp(to: string, body: string): Promise<boolean> {
   const from = `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`
   const toFormatted = `whatsapp:${normalizePhone(to)}`
-
-  console.log('[WhatsApp] Sending...')
-  console.log('[WhatsApp] From:', from)
-  console.log('[WhatsApp] To:', toFormatted)
-  console.log('[WhatsApp] Body:', body)
 
   try {
     const client = getClient()
     const msg = await client.messages.create({ from, to: toFormatted, body })
-    console.log('[WhatsApp] Sent! SID:', msg.sid, 'Status:', msg.status)
-  } catch (err: any) {
-    console.error('[WhatsApp] FAILED:', err?.message)
-    console.error('[WhatsApp] Code:', err?.code)
-    console.error('[WhatsApp] More info:', err?.moreInfo)
+    console.log('[WhatsApp] Sent. SID:', msg.sid, 'Status:', msg.status)
+    return true
+  } catch (err) {
+    const { code, status } = err as { code?: number; status?: number }
+    console.error('[WhatsApp] Failed. Code:', code ?? 'unknown', 'Status:', status ?? 'unknown')
+    return false
   }
 }
 

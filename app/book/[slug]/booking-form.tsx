@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { getSlotAvailability, sendBookingOtp, verifyBookingOtp, createOnlineBooking } from '@/app/actions/online-booking'
+import { getSlotAvailability, sendBookingOtp, createOnlineBooking } from '@/app/actions/online-booking'
 import { CUSTOMER_LABELS } from '@/types'
 import type { BusinessType } from '@/types'
 import { ChevronLeft, ChevronRight, CheckCircle, CalendarDays, Clock } from 'lucide-react'
@@ -65,7 +65,6 @@ interface Business {
   name: string
   type: string
   slug: string
-  phone: string
 }
 
 export default function BookingForm({
@@ -85,6 +84,8 @@ export default function BookingForm({
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [otpCode, setOtpCode] = useState('')
+  const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -149,29 +150,51 @@ export default function BookingForm({
     if (!name.trim()) { setError('Please enter your name.'); return }
     if (!phone.trim()) { setError('Please enter your phone number.'); return }
     setError(null)
+    setNotice(null)
+    // A code already sent to this number still works (e.g. after the first slot
+    // was taken), and the OTP step offers a resend if it has expired.
+    if (codeSentTo === phone.trim()) { setStep('otp'); return }
     startTransition(async () => {
       const res = await sendBookingOtp(phone, business.id)
       if (!res.ok) { setError(res.error ?? 'Something went wrong.'); return }
+      setCodeSentTo(phone.trim())
       setStep('otp')
+    })
+  }
+
+  function handleResendOtp() {
+    setOtpCode('')
+    setError(null)
+    setNotice(null)
+    startTransition(async () => {
+      const res = await sendBookingOtp(phone, business.id)
+      if (!res.ok) { setError(res.error ?? 'Something went wrong.'); return }
+      setNotice('New code sent.')
     })
   }
 
   function handleVerifyOtp() {
     if (otpCode.length !== 6) { setError('Enter the 6-digit code.'); return }
     setError(null)
+    setNotice(null)
     startTransition(async () => {
-      const res = await verifyBookingOtp(phone, otpCode, business.id)
-      if (!res.ok) { setError(res.error ?? 'Verification failed.'); return }
-      const bookRes = await createOnlineBooking({
+      const res = await createOnlineBooking({
         businessId: business.id,
-        businessName: business.name,
-        businessPhone: business.phone,
         name,
         phone,
+        code: otpCode,
         date,
         slot: selectedSlot!,
       })
-      if (!bookRes.ok) { setError(bookRes.error ?? 'Booking failed.'); return }
+      if (!res.ok) {
+        setError(res.error ?? 'Booking failed.')
+        if (res.slotUnavailable) {
+          setSelectedSlot(null)
+          setStep('pick')
+          setSlotCounts(await getSlotAvailability(business.id, date))
+        }
+        return
+      }
       setStep('done')
     })
   }
@@ -233,6 +256,10 @@ export default function BookingForm({
             <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-xl mb-4">{error}</p>
           )}
 
+          {notice && (
+            <p className="text-sm text-green-700 bg-green-50 px-4 py-2 rounded-xl mb-4">{notice}</p>
+          )}
+
           <button
             onClick={handleVerifyOtp}
             disabled={pending || otpCode.length !== 6}
@@ -243,8 +270,9 @@ export default function BookingForm({
           </button>
 
           <button
-            onClick={() => { setOtpCode(''); startTransition(async () => { await sendBookingOtp(phone, business.id) }) }}
-            className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+            onClick={handleResendOtp}
+            disabled={pending}
+            className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-50 transition-colors"
           >
             Resend code
           </button>

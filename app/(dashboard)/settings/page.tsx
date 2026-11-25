@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { normalizePhone } from '@/lib/phone'
 import { DAY_NAMES, CUSTOMER_LABELS, INACTIVE_THRESHOLDS } from '@/types'
 import type { BusinessType } from '@/types'
 import { CheckCircle, Trash2, UserPlus } from 'lucide-react'
@@ -104,7 +105,7 @@ export default function SettingsPage() {
     const supabase = createClient()
     const { error } = await supabase
       .from('businesses')
-      .update({ name: businessName.trim(), type: businessType, phone: businessPhone.trim(), inactive_threshold_days: threshold })
+      .update({ name: businessName.trim(), type: businessType, phone: normalizePhone(businessPhone), inactive_threshold_days: threshold })
       .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
     if (error) {
       setProfileError(error.message)

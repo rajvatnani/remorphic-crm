@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { normalizePhone } from '@/lib/phone'
 import { sendWhatsApp, visitThankYouMessage, appointmentConfirmMessage } from '@/lib/whatsapp'
 
 export async function bookAppointment(formData: FormData) {
@@ -14,7 +15,7 @@ export async function bookAppointment(formData: FormData) {
   // If new customer, create them first
   if (!customerId) {
     const name = (formData.get('new_customer_name') as string).trim()
-    const phone = (formData.get('new_customer_phone') as string).trim()
+    const phone = normalizePhone(formData.get('new_customer_phone') as string)
     const { data: newCustomer, error: customerError } = await supabase
       .from('customers')
       .insert({ business_id: business.id, name, phone })
