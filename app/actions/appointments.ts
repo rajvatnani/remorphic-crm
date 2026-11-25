@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { normalizePhone } from '@/lib/phone'
 import { sendWhatsApp, visitThankYouMessage, appointmentConfirmMessage } from '@/lib/whatsapp'
 
 export async function bookAppointment(formData: FormData) {
@@ -14,7 +16,7 @@ export async function bookAppointment(formData: FormData) {
   // If new customer, create them first
   if (!customerId) {
     const name = (formData.get('new_customer_name') as string).trim()
-    const phone = (formData.get('new_customer_phone') as string).trim()
+    const phone = normalizePhone(formData.get('new_customer_phone') as string)
     const { data: newCustomer, error: customerError } = await supabase
       .from('customers')
       .insert({ business_id: business.id, name, phone })
@@ -211,4 +213,32 @@ export async function saveAppointmentConfig(formData: FormData) {
   if (error) throw new Error(error.message)
   revalidatePath('/settings')
   revalidatePath('/appointments')
+}
+
+// Looks the file up from an appointment the caller can see (RLS), so a signed
+// link cannot be requested for an arbitrary path.
+export async function getPaymentScreenshotUrl(appointmentId: string): Promise<string | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data: appt } = await supabase
+    .from('appointments')
+    .select('payment_screenshot')
+    .eq('id', appointmentId)
+    .maybeSingle()
+
+  const stored = appt?.payment_screenshot as string | null | undefined
+  if (!stored) return null
+
+  // Older bookings stored a full URL instead of a path
+  const path = stored.startsWith('http')
+    ? (stored.match(/payment-screenshots\/(.+?)(\?|$)/)?.[1] ?? null)
+    : stored
+  if (!path) return null
+
+  const { data } = await createAdminClient().storage
+    .from('payment-screenshots')
+    .createSignedUrl(path, 3600)
+  return data?.signedUrl ?? null
 }

@@ -8,8 +8,8 @@ import {
   cancelAppointment,
   approveBooking,
   declineBooking,
+  getPaymentScreenshotUrl,
 } from '@/app/actions/appointments'
-import { getPaymentScreenshotUrl } from '@/app/actions/online-booking'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -494,7 +494,7 @@ export default function AppointmentsPage() {
                               <button
                                 type="button"
                                 onClick={async () => {
-                                  const url = await getPaymentScreenshotUrl(appt.payment_screenshot!)
+                                  const url = await getPaymentScreenshotUrl(appt.id)
                                   if (url) setScreenshotPreview(url)
                                 }}
                                 className="inline-flex items-center gap-1 mt-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"

@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { checkIsAdmin } from '@/app/actions/admin'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ChevronLeft } from 'lucide-react'
 
@@ -18,6 +19,9 @@ export default async function AdminBusinessPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  // A layout is not re-rendered on every navigation, so it cannot be the only check
+  if (!(await checkIsAdmin())) redirect('/dashboard')
+
   const admin = createAdminClient()
 
   const { data: biz } = await admin

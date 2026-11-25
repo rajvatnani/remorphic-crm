@@ -95,10 +95,11 @@ export async function nudgeCustomer(customerId: string): Promise<{ ok: boolean; 
     if (daysSince < 7) return { ok: false, error: 'A nudge was already sent to this customer within the last 7 days.' }
   }
 
-  await sendWhatsApp(
+  const sent = await sendWhatsApp(
     customer.phone,
     `Hi ${customer.name}! It's been a while since you visited ${business.name}. We'd love to see you again! 🙏`
   )
+  if (!sent) return { ok: false, error: 'The WhatsApp message could not be sent. Please try again.' }
 
   await supabase
     .from('customers')

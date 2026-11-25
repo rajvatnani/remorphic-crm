@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { getSlotAvailability, sendBookingOtp, verifyBookingOtp, createOnlineBooking, uploadPaymentScreenshot } from '@/app/actions/online-booking'
+import { getSlotAvailability, sendBookingOtp, createOnlineBooking } from '@/app/actions/online-booking'
 import { ChevronLeft, ChevronRight, CheckCircle, CalendarDays, Clock, MapPin, Upload } from 'lucide-react'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -76,7 +76,6 @@ interface Business {
   name: string
   type: string
   slug: string
-  phone: string
   customer_label: string | null
   address: string | null
   photo: string | null
@@ -117,21 +116,37 @@ export default function BookingForm({
   const [phone, setPhone] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [selectedServices, setSelectedServices] = useState<string[]>([])
-  const [paymentScreenshotUrl, setPaymentScreenshotUrl] = useState<string | null>(null)
-  const [screenshotUploading, setScreenshotUploading] = useState(false)
+  const [screenshot, setScreenshot] = useState<File | null>(null)
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
+  const [screenshotFailed, setScreenshotFailed] = useState(false)
+  const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
-  async function handleScreenshotUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  function clearScreenshot() {
+    if (screenshotPreview) URL.revokeObjectURL(screenshotPreview)
+    setScreenshot(null)
+    setScreenshotPreview(null)
+  }
+
+  // Kept in the browser until the booking is confirmed
+  function handleScreenshotSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
-    setScreenshotUploading(true)
-    const fd = new FormData()
-    fd.set('file', file)
-    const { url } = await uploadPaymentScreenshot(fd)
-    if (url) setPaymentScreenshotUrl(url)
-    setScreenshotUploading(false)
     e.target.value = ''
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('The payment screenshot must be a JPG, PNG or WebP image.')
+      return
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      setError('The payment screenshot must be smaller than 3 MB.')
+      return
+    }
+    clearScreenshot()
+    setError(null)
+    setScreenshot(file)
+    setScreenshotPreview(URL.createObjectURL(file))
   }
 
   // Load slot availability when date changes
@@ -204,31 +219,58 @@ export default function BookingForm({
     if (!name.trim()) { setError('Please enter your name.'); return }
     if (!phone.trim()) { setError('Please enter your phone number.'); return }
     setError(null)
+    setNotice(null)
+    // A code already sent to this number still works (e.g. after the first slot
+    // was taken), and the OTP step offers a resend if it has expired.
+    if (codeSentTo === phone.trim()) { setStep('otp'); return }
     startTransition(async () => {
       const res = await sendBookingOtp(phone, business.id)
       if (!res.ok) { setError(res.error ?? 'Something went wrong.'); return }
+      setCodeSentTo(phone.trim())
       setStep('otp')
+    })
+  }
+
+  function handleResendOtp() {
+    setOtpCode('')
+    setError(null)
+    setNotice(null)
+    startTransition(async () => {
+      const res = await sendBookingOtp(phone, business.id)
+      if (!res.ok) { setError(res.error ?? 'Something went wrong.'); return }
+      setNotice('New code sent.')
     })
   }
 
   function handleVerifyOtp() {
     if (otpCode.length !== 6) { setError('Enter the 6-digit code.'); return }
     setError(null)
+    setNotice(null)
     startTransition(async () => {
-      const res = await verifyBookingOtp(phone, otpCode, business.id)
-      if (!res.ok) { setError(res.error ?? 'Verification failed.'); return }
-      const bookRes = await createOnlineBooking({
+      let upload: FormData | undefined
+      if (screenshot) {
+        upload = new FormData()
+        upload.set('file', screenshot)
+      }
+      const res = await createOnlineBooking({
         businessId: business.id,
-        businessName: business.name,
-        businessPhone: business.phone,
         name,
         phone,
+        code: otpCode,
         date,
         slot: selectedSlot!,
-        paymentScreenshot: paymentScreenshotUrl,
         selectedServices,
-      })
-      if (!bookRes.ok) { setError(bookRes.error ?? 'Booking failed.'); return }
+      }, upload)
+      if (!res.ok) {
+        setError(res.error ?? 'Booking failed.')
+        if (res.slotUnavailable) {
+          setSelectedSlot(null)
+          setStep('pick')
+          setSlotCounts(await getSlotAvailability(business.id, date))
+        }
+        return
+      }
+      setScreenshotFailed(Boolean(res.screenshotFailed))
       setStep('done')
     })
   }
@@ -254,6 +296,11 @@ export default function BookingForm({
           <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm text-amber-800">
             We'll send you a WhatsApp confirmation once it's approved.
           </div>
+          {screenshotFailed && (
+            <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-xl mt-3">
+              Your payment screenshot could not be saved. Please send it to {business.name} directly.
+            </p>
+          )}
         </div>
       </div>
     )
@@ -290,6 +337,10 @@ export default function BookingForm({
             <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-xl mb-4">{error}</p>
           )}
 
+          {notice && (
+            <p className="text-sm text-green-700 bg-green-50 px-4 py-2 rounded-xl mb-4">{notice}</p>
+          )}
+
           <button
             onClick={handleVerifyOtp}
             disabled={pending || otpCode.length !== 6}
@@ -300,8 +351,9 @@ export default function BookingForm({
           </button>
 
           <button
-            onClick={() => { setOtpCode(''); startTransition(async () => { await sendBookingOtp(phone, business.id) }) }}
-            className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 transition-colors"
+            onClick={handleResendOtp}
+            disabled={pending}
+            className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-50 transition-colors"
           >
             Resend code
           </button>
@@ -339,19 +391,19 @@ export default function BookingForm({
                 <label className="text-sm font-medium text-gray-700">
                   Upload payment screenshot <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
-                {paymentScreenshotUrl ? (
+                {screenshotPreview ? (
                   <div className="flex items-center gap-3 mt-1">
-                    <img src={paymentScreenshotUrl} alt="Payment proof" className="w-16 h-16 object-cover rounded-xl border border-orange-200" />
+                    <img src={screenshotPreview} alt="Payment proof" className="w-16 h-16 object-cover rounded-xl border border-orange-200" />
                     <div>
-                      <p className="text-xs text-green-600 font-medium mb-1">✓ Screenshot uploaded</p>
-                      <button type="button" onClick={() => setPaymentScreenshotUrl(null)} className="text-xs text-gray-400 hover:text-red-500">Remove</button>
+                      <p className="text-xs text-green-600 font-medium mb-1">✓ Screenshot added</p>
+                      <button type="button" onClick={clearScreenshot} className="text-xs text-gray-400 hover:text-red-500">Remove</button>
                     </div>
                   </div>
                 ) : (
                   <label className="flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-orange-200 rounded-2xl px-4 py-3 hover:bg-orange-50/50 transition-colors mt-1">
-                    <input type="file" accept="image/*" onChange={handleScreenshotUpload} className="hidden" disabled={screenshotUploading} />
+                    <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleScreenshotSelect} className="hidden" />
                     <Upload className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm text-gray-500">{screenshotUploading ? 'Uploading…' : 'Tap to upload screenshot'}</span>
+                    <span className="text-sm text-gray-500">Tap to add screenshot</span>
                   </label>
                 )}
               </div>
@@ -408,7 +460,7 @@ export default function BookingForm({
                 type="tel"
                 value={phone}
                 onChange={e => { setPhone(e.target.value); setError(null) }}
-                placeholder="+1 555 000 0000"
+                placeholder="98765 43210"
                 className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm transition-colors"
               />
               <p className="text-xs text-gray-400">We'll send a verification code to this number via WhatsApp</p>

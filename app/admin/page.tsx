@@ -1,11 +1,15 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { enterBusinessAsAdmin } from '@/app/actions/admin'
+import { redirect } from 'next/navigation'
+import { checkIsAdmin, enterBusinessAsAdmin } from '@/app/actions/admin'
 
 const TYPE_EMOJI: Record<string, string> = {
   clinic: '🏥', salon: '✂️', gym: '💪', other: '🏢',
 }
 
 export default async function AdminHomePage() {
+  // A layout is not re-rendered on every navigation, so it cannot be the only check
+  if (!(await checkIsAdmin())) redirect('/dashboard')
+
   const admin = createAdminClient()
 
   const { data: businesses } = await admin
