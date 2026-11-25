@@ -50,9 +50,37 @@ export async function inviteStaff(email: string) {
   revalidatePath('/settings')
 }
 
-export async function removeUser(businessUserId: string) {
+// Returns errors instead of throwing: Next.js hides thrown messages in production.
+// The same rules are enforced by RLS, since members can also reach the table directly.
+export async function removeUser(businessUserId: string): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient()
-  const { error } = await supabase.from('business_users').delete().eq('id', businessUserId)
-  if (error) throw new Error(error.message)
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { ok: false, error: 'Please sign in again.' }
+
+  const { data: business } = await supabase.from('businesses').select('id, user_id').single()
+  if (!business) return { ok: false, error: 'No business found' }
+
+  const { data: member } = await supabase
+    .from('business_users')
+    .select('id, user_id')
+    .eq('id', businessUserId)
+    .eq('business_id', business.id)
+    .maybeSingle()
+
+  if (!member) return { ok: false, error: 'This person no longer has access' }
+  if (member.user_id === business.user_id) return { ok: false, error: 'The owner cannot be removed' }
+  if (member.user_id === user.id) return { ok: false, error: 'You cannot remove yourself' }
+
+  // RLS filters rows silently, so check that one was actually deleted
+  const { data: deleted, error } = await supabase
+    .from('business_users')
+    .delete()
+    .eq('id', member.id)
+    .select('id')
+
+  if (error || !deleted?.length) return { ok: false, error: 'Failed to remove staff member' }
+
   revalidatePath('/settings')
+  return { ok: true }
 }

@@ -16,8 +16,16 @@ import { DAY_NAMES, CUSTOMER_LABELS, INACTIVE_THRESHOLDS } from '@/types'
 import type { BusinessType } from '@/types'
 import { CheckCircle, Trash2, UserPlus } from 'lucide-react'
 
+interface StaffMember {
+  id: string
+  user_id: string
+  email: string
+  created_at: string
+}
+
 export default function SettingsPage() {
   // Business profile
+  const [businessId, setBusinessId] = useState<string | null>(null)
   const [businessName, setBusinessName] = useState('')
   const [businessType, setBusinessType] = useState<BusinessType>('other')
   const [inactiveThresholdDays, setInactiveThresholdDays] = useState('60')
@@ -39,7 +47,10 @@ export default function SettingsPage() {
   const [apptError, setApptError] = useState<string | null>(null)
 
   // Staff
-  const [staffList, setStaffList] = useState<{ id: string; email: string; created_at: string }[]>([])
+  const [staffList, setStaffList] = useState<StaffMember[]>([])
+  const [staffError, setStaffError] = useState<string | null>(null)
+  const [ownerUserId, setOwnerUserId] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [inviteEmail, setInviteEmail] = useState('')
   const [invitePending, setInvitePending] = useState(false)
   const [inviteError, setInviteError] = useState<string | null>(null)
@@ -49,12 +60,17 @@ export default function SettingsPage() {
 
   async function loadStaff(businessId: string) {
     const supabase = createClient()
-    const { data } = await supabase
-      .from('staff')
-      .select('id, email, created_at')
+    const { data, error } = await supabase
+      .from('business_users')
+      .select('id, user_id, email, created_at')
       .eq('business_id', businessId)
       .order('created_at')
-    setStaffList(data ?? [])
+    if (error) {
+      setStaffError('Could not load staff members. Please refresh the page.')
+      return
+    }
+    setStaffError(null)
+    setStaffList(data)
   }
 
   useEffect(() => {
@@ -62,6 +78,10 @@ export default function SettingsPage() {
     async function load() {
       const { data: biz } = await supabase.from('businesses').select('*').single()
       if (!biz) return
+      setBusinessId(biz.id)
+      setOwnerUserId(biz.user_id)
+      const { data: { user } } = await supabase.auth.getUser()
+      setCurrentUserId(user?.id ?? null)
       setBusinessName(biz.name)
       setBusinessType(biz.type as BusinessType)
       setBusinessPhone(biz.phone ?? '')
@@ -99,16 +119,23 @@ export default function SettingsPage() {
       setProfileError('Inactivity threshold must be a positive number of days')
       return
     }
+    if (!businessId) {
+      setProfileError('Your business has not loaded yet. Please refresh the page.')
+      return
+    }
     setProfilePending(true)
     setProfileError(null)
     setProfileSaved(false)
     const supabase = createClient()
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from('businesses')
       .update({ name: businessName.trim(), type: businessType, phone: normalizePhone(businessPhone), inactive_threshold_days: threshold })
-      .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+      .eq('id', businessId)
+      .select('id')
     if (error) {
       setProfileError(error.message)
+    } else if (!updated.length) {
+      setProfileError('Nothing was saved. You may no longer have access to this business.')
     } else {
       setProfileSaved(true)
       setTimeout(() => setProfileSaved(false), 3000)
@@ -138,11 +165,13 @@ export default function SettingsPage() {
   }
 
   async function handleRemoveStaff(staffId: string) {
+    setStaffError(null)
     try {
-      await removeUser(staffId)
+      const res = await removeUser(staffId)
+      if (!res.ok) { setStaffError(res.error ?? 'Failed to remove staff member'); return }
       setStaffList(prev => prev.filter(s => s.id !== staffId))
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to remove staff')
+    } catch {
+      setStaffError('Failed to remove staff member')
     }
   }
 
@@ -418,6 +447,10 @@ export default function SettingsPage() {
             </p>
           )}
 
+          {staffError && (
+            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{staffError}</p>
+          )}
+
           {/* Staff list */}
           {staffList.length > 0 && (
             <div className="border border-gray-200 rounded-lg overflow-hidden mt-2">
@@ -427,24 +460,30 @@ export default function SettingsPage() {
                   className={`flex items-center justify-between px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}
                 >
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{s.email}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {s.email}
+                      {s.user_id === ownerUserId && <span className="ml-2 text-xs font-normal text-gray-500">Owner</span>}
+                      {s.user_id === currentUserId && <span className="ml-2 text-xs font-normal text-gray-500">You</span>}
+                    </p>
                     <p className="text-xs text-gray-400">
                       Added {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleRemoveStaff(s.id)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                    title="Remove staff member"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {s.user_id !== ownerUserId && s.user_id !== currentUserId && (
+                    <button
+                      onClick={() => handleRemoveStaff(s.id)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      title="Remove staff member"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
           )}
 
-          {staffList.length === 0 && (
+          {staffList.length === 0 && !staffError && (
             <p className="text-sm text-gray-400 text-center py-4">No staff members yet.</p>
           )}
         </CardContent>
