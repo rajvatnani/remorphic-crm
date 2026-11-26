@@ -9,6 +9,7 @@ import {
   approveBooking,
   declineBooking,
   getPaymentScreenshotUrl,
+  changeAppointment,
 } from '@/app/actions/appointments'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +24,7 @@ import {
 } from '@/components/ui/dialog'
 import type { AppointmentConfig, AppointmentWithCustomer, Business } from '@/types'
 import { DAY_NAMES } from '@/types'
-import { ChevronLeft, ChevronRight, Plus, Check, X, Search, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Check, X, Search, Clock, Pencil } from 'lucide-react'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -254,6 +255,154 @@ function AddBookingDialog({
   )
 }
 
+// ─── change booking dialog ───────────────────────────────────────────────────
+
+function ChangeBookingDialog({
+  appt,
+  config,
+  onClose,
+  onChanged,
+}: {
+  appt: AppointmentWithCustomer | null
+  config: AppointmentConfig
+  onClose: () => void
+  onChanged: (newDate: string, message: string | null) => void
+}) {
+  const [date, setDate] = useState('')
+  const [slot, setSlot] = useState('')
+  const [service, setService] = useState('')
+  const [notes, setNotes] = useState('')
+  const [notify, setNotify] = useState(true)
+  const [counts, setCounts] = useState<Record<string, number>>({})
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+  const [loadedFor, setLoadedFor] = useState<string | null>(null)
+
+  // Reset the form each time a different booking is opened
+  if (appt && loadedFor !== appt.id) {
+    setLoadedFor(appt.id)
+    setDate(appt.appointment_date)
+    setSlot(appt.slot_time.slice(0, 5))
+    setService(appt.service)
+    setNotes(appt.notes ?? '')
+    setNotify(true)
+    setError(null)
+  }
+  if (!appt && loadedFor !== null) setLoadedFor(null)
+
+  useEffect(() => {
+    if (!appt || !date) return
+    let stale = false
+    createClient()
+      .from('appointments')
+      .select('id, slot_time')
+      .eq('business_id', appt.business_id)
+      .eq('appointment_date', date)
+      .neq('status', 'cancelled')
+      .neq('id', appt.id)
+      .then(({ data }) => {
+        if (stale) return
+        const c: Record<string, number> = {}
+        for (const row of data ?? []) {
+          const key = (row.slot_time as string).slice(0, 5)
+          c[key] = (c[key] ?? 0) + 1
+        }
+        setCounts(c)
+      })
+    return () => { stale = true }
+  }, [appt, date])
+
+  if (!appt) return null
+
+  const slots = generateSlots(config)
+  const closed = date ? !config.open_days.includes(getDayOfWeek(date)) : false
+  const moved = date !== appt.appointment_date || slot !== appt.slot_time.slice(0, 5)
+  const canNotify = Boolean(appt.customers.phone) && appt.status !== 'confirmed'
+
+  function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!appt) return
+    setError(null)
+    startTransition(async () => {
+      const res = await changeAppointment(appt.id, {
+        date, slot, service, notes, notify: canNotify && notify,
+      })
+      if (!res.ok) { setError(res.error ?? 'Could not save the change.'); return }
+      let message: string | null = null
+      if (canNotify && notify && moved) {
+        message = res.notified
+          ? `Booking moved. ${appt.customers.name} was told on WhatsApp.`
+          : `Booking moved, but the WhatsApp message to ${appt.customers.name} could not be sent.`
+      }
+      onChanged(date, message)
+    })
+  }
+
+  return (
+    <Dialog open onOpenChange={open => { if (!open) onClose() }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Change booking — {appt.customers.name}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSave} className="space-y-4 mt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="change_date">Date</Label>
+              <Input id="change_date" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="change_slot">Time</Label>
+              <select
+                id="change_slot"
+                value={slot}
+                onChange={e => setSlot(e.target.value)}
+                disabled={closed}
+                className="w-full h-9 px-3 rounded-lg border border-input bg-transparent text-sm outline-none focus:border-orange-400 disabled:opacity-50"
+              >
+                {!slots.includes(slot) && <option value={slot}>{formatSlotTime(slot)}</option>}
+                {slots.map(s => {
+                  const full = (counts[s] ?? 0) >= config.max_per_slot
+                  return (
+                    <option key={s} value={s} disabled={full}>
+                      {formatSlotTime(s)}{full ? ' (full)' : ''}
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
+          </div>
+          {closed && (
+            <p className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
+              {DAY_NAMES[getDayOfWeek(date)]}s are marked as closed. Pick another date.
+            </p>
+          )}
+          <div className="space-y-1.5">
+            <Label htmlFor="change_service">Service</Label>
+            <Input id="change_service" value={service} onChange={e => setService(e.target.value)} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="change_notes">Notes <span className="text-gray-400 font-normal">(optional)</span></Label>
+            <Textarea id="change_notes" value={notes} onChange={e => setNotes(e.target.value)} rows={2} />
+          </div>
+          {canNotify && moved && (
+            <label className="flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={notify} onChange={e => setNotify(e.target.checked)} />
+              Tell {appt.customers.name} about the new time on WhatsApp
+            </label>
+          )}
+          {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={pending || closed} style={{ backgroundColor: '#F15A24' }}>
+              {pending ? 'Saving…' : 'Save changes'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ─── main page ────────────────────────────────────────────────────────────────
 
 export default function AppointmentsPage() {
@@ -267,6 +416,8 @@ export default function AppointmentsPage() {
   const [pendingCount, setPendingCount] = useState(0)
   const [dialogSlot, setDialogSlot] = useState<string | null>(null)
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
+  const [changing, setChanging] = useState<AppointmentWithCustomer | null>(null)
+  const [flash, setFlash] = useState<string | null>(null)
   const [actionPending, startTransition] = useTransition()
 
   const supabase = createClient()
@@ -373,6 +524,13 @@ export default function AppointmentsPage() {
           <p className="text-sm font-medium text-purple-800">
             {pendingCount === 1 ? '1 online booking request' : `${pendingCount} online booking requests`} waiting for your approval — navigate to the relevant date to approve.
           </p>
+        </div>
+      )}
+
+      {flash && (
+        <div className="mb-4 flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800">
+          <span>{flash}</span>
+          <button onClick={() => setFlash(null)} className="text-green-700 hover:text-green-900"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -485,7 +643,7 @@ export default function AppointmentsPage() {
                               {appt.customers.name}
                             </p>
                             <p className="text-xs text-gray-500">
-                              {appt.service} · {appt.customers.phone}
+                              {appt.service}{appt.customers.phone ? ` · ${appt.customers.phone}` : ''}
                             </p>
                             {appt.notes && (
                               <p className="text-xs text-gray-400 mt-0.5 italic">{appt.notes}</p>
@@ -506,6 +664,17 @@ export default function AppointmentsPage() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                           <StatusBadge status={appt.status} />
+                          {appt.status !== 'cancelled' && (
+                            <button
+                              onClick={() => { setFlash(null); setChanging(appt) }}
+                              disabled={actionPending}
+                              title="Change booking"
+                              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-[#F15A24] transition-colors disabled:opacity-50"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Change
+                            </button>
+                          )}
                           {appt.status === 'pending' && (
                             <>
                               <button
@@ -570,6 +739,21 @@ export default function AppointmentsPage() {
         label={label}
         onBooked={() => loadAppointments(date)}
       />
+
+      {/* Change booking dialog */}
+      {config && (
+        <ChangeBookingDialog
+          appt={changing}
+          config={config}
+          onClose={() => setChanging(null)}
+          onChanged={(newDate, message) => {
+            setChanging(null)
+            setFlash(message ?? 'Booking changed.')
+            if (newDate === date) loadAppointments(date)
+            else setDate(newDate)
+          }}
+        />
+      )}
 
       {/* Payment screenshot preview dialog */}
       <Dialog open={screenshotPreview !== null} onOpenChange={(open) => { if (!open) setScreenshotPreview(null) }}>
