@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useTransition } from 'react'
-import { getSlotAvailability, sendBookingOtp, createOnlineBooking } from '@/app/actions/online-booking'
+import { getSlotAvailability, createOnlineBooking } from '@/app/actions/online-booking'
 import { ChevronLeft, ChevronRight, CheckCircle, CalendarDays, Clock, MapPin, Upload } from 'lucide-react'
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ function groupSlots(slots: string[]) {
 
 // ── component ────────────────────────────────────────────────────────────────
 
-type Step = 'pick' | 'details' | 'otp' | 'done'
+type Step = 'pick' | 'details' | 'done'
 
 interface Config {
   slot_duration: number
@@ -114,13 +114,10 @@ export default function BookingForm({
   const [step, setStep] = useState<Step>('pick')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
-  const [otpCode, setOtpCode] = useState('')
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [screenshot, setScreenshot] = useState<File | null>(null)
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null)
   const [screenshotFailed, setScreenshotFailed] = useState(false)
-  const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -215,37 +212,9 @@ export default function BookingForm({
     setError(null)
   }
 
-  function handleSendOtp() {
+  function handleBook() {
     if (!name.trim()) { setError('Please enter your name.'); return }
-    if (!phone.trim()) { setError('Please enter your phone number.'); return }
     setError(null)
-    setNotice(null)
-    // A code already sent to this number still works (e.g. after the first slot
-    // was taken), and the OTP step offers a resend if it has expired.
-    if (codeSentTo === phone.trim()) { setStep('otp'); return }
-    startTransition(async () => {
-      const res = await sendBookingOtp(phone, business.id)
-      if (!res.ok) { setError(res.error ?? 'Something went wrong.'); return }
-      setCodeSentTo(phone.trim())
-      setStep('otp')
-    })
-  }
-
-  function handleResendOtp() {
-    setOtpCode('')
-    setError(null)
-    setNotice(null)
-    startTransition(async () => {
-      const res = await sendBookingOtp(phone, business.id)
-      if (!res.ok) { setError(res.error ?? 'Something went wrong.'); return }
-      setNotice('New code sent.')
-    })
-  }
-
-  function handleVerifyOtp() {
-    if (otpCode.length !== 6) { setError('Enter the 6-digit code.'); return }
-    setError(null)
-    setNotice(null)
     startTransition(async () => {
       let upload: FormData | undefined
       if (screenshot) {
@@ -256,7 +225,6 @@ export default function BookingForm({
         businessId: business.id,
         name,
         phone,
-        code: otpCode,
         date,
         slot: selectedSlot!,
         selectedServices,
@@ -294,69 +262,15 @@ export default function BookingForm({
             has been submitted.
           </p>
           <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm text-amber-800">
-            We'll send you a WhatsApp confirmation once it's approved.
+            {phone.trim()
+              ? "We'll send you a WhatsApp confirmation once it's approved."
+              : `${business.name} will confirm your booking.`}
           </div>
           {screenshotFailed && (
             <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-xl mt-3">
               Your payment screenshot could not be saved. Please send it to {business.name} directly.
             </p>
           )}
-        </div>
-      </div>
-    )
-  }
-
-  // ── STEP: OTP ──────────────────────────────────────────────────────────────
-  if (step === 'otp') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-rose-50 flex items-start justify-center p-4 pt-16">
-        <div className="bg-white rounded-3xl shadow-md p-8 max-w-sm w-full">
-          <button onClick={() => { setStep('details'); setOtpCode(''); setError(null) }} className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mb-6">
-            <ChevronLeft className="w-4 h-4" /> Back
-          </button>
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">Verify your phone</h2>
-          <p className="text-gray-500 text-sm mb-8">
-            We sent a 6-digit code to <span className="font-medium text-gray-800">{phone}</span> via WhatsApp.
-          </p>
-
-          <div className="space-y-2 mb-6">
-            <label className="text-sm font-medium text-gray-700">Verification code</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={otpCode}
-              onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '')); setError(null) }}
-              placeholder="000000"
-              className="w-full h-14 rounded-2xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-center text-2xl font-bold tracking-[0.5em] transition-colors"
-              autoFocus
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-xl mb-4">{error}</p>
-          )}
-
-          {notice && (
-            <p className="text-sm text-green-700 bg-green-50 px-4 py-2 rounded-xl mb-4">{notice}</p>
-          )}
-
-          <button
-            onClick={handleVerifyOtp}
-            disabled={pending || otpCode.length !== 6}
-            className="w-full h-12 rounded-2xl text-white font-semibold text-base transition-all disabled:opacity-50"
-            style={{ backgroundColor: '#F15A24' }}
-          >
-            {pending ? 'Verifying…' : 'Confirm Booking'}
-          </button>
-
-          <button
-            onClick={handleResendOtp}
-            disabled={pending}
-            className="w-full mt-3 text-sm text-gray-400 hover:text-gray-600 disabled:opacity-50 transition-colors"
-          >
-            Resend code
-          </button>
         </div>
       </div>
     )
@@ -455,7 +369,9 @@ export default function BookingForm({
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-gray-700">WhatsApp number</label>
+              <label className="text-sm font-medium text-gray-700">
+                WhatsApp number <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
               <input
                 type="tel"
                 value={phone}
@@ -463,7 +379,7 @@ export default function BookingForm({
                 placeholder="98765 43210"
                 className="w-full h-12 px-4 rounded-2xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm transition-colors"
               />
-              <p className="text-xs text-gray-400">We'll send a verification code to this number via WhatsApp</p>
+              <p className="text-xs text-gray-400">To send you booking updates on WhatsApp</p>
             </div>
           </div>
 
@@ -472,12 +388,12 @@ export default function BookingForm({
           )}
 
           <button
-            onClick={handleSendOtp}
+            onClick={handleBook}
             disabled={pending}
             className="w-full h-12 rounded-2xl text-white font-semibold text-base transition-all disabled:opacity-50"
             style={{ backgroundColor: '#F15A24' }}
           >
-            {pending ? 'Sending code…' : 'Send WhatsApp Code →'}
+            {pending ? 'Booking…' : 'Confirm Booking →'}
           </button>
         </div>
       </div>
