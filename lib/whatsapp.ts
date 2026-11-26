@@ -11,8 +11,12 @@ function getClient() {
 // Never log phone numbers or message bodies here: bodies include booking codes.
 // Twilio's error messages can quote the number, so log only the error code.
 export async function sendWhatsApp(to: string, body: string): Promise<boolean> {
+  // Customers who booked online without a number are stored with ''
+  const toNumber = normalizePhone(to ?? '')
+  if (!toNumber) return false
+
   const from = `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`
-  const toFormatted = `whatsapp:${normalizePhone(to)}`
+  const toFormatted = `whatsapp:${toNumber}`
 
   try {
     const client = getClient()
