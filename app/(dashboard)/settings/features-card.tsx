@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { Fragment, useEffect, useState, useTransition, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { MODULES, enabledModules, type ModuleKey } from '@/lib/modules'
@@ -8,10 +8,22 @@ import { canSendEmail } from '@/app/actions/orders'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 /** Switches each part of the app on or off for this business. Saves on each change. */
-export default function FeaturesCard() {
+export default function FeaturesCard({
+  extras = {},
+  onModulesChange,
+}: {
+  /** Settings shown under a feature's switch while it is on */
+  extras?: Partial<Record<ModuleKey, ReactNode>>
+  onModulesChange?: (on: Record<ModuleKey, boolean>) => void
+}) {
   const router = useRouter()
   const [businessId, setBusinessId] = useState<string | null>(null)
   const [on, setOn] = useState<Record<ModuleKey, boolean> | null>(null)
+
+  // Let the page show or hide fields that belong to a feature
+  useEffect(() => {
+    if (on) onModulesChange?.(on)
+  }, [on, onModulesChange])
   const [shopOn, setShopOn] = useState(false)
   const [slug, setSlug] = useState('')
   const [copied, setCopied] = useState(false)
@@ -123,7 +135,8 @@ export default function FeaturesCard() {
       <CardContent className="space-y-3">
         {!on && <p className="text-sm text-gray-400">Loading…</p>}
         {on && MODULES.map(m => (
-          <label key={m.key} className="flex items-start justify-between gap-4 cursor-pointer">
+          <Fragment key={m.key}>
+          <label className="flex items-start justify-between gap-4 cursor-pointer">
             <span>
               <span className="block text-sm font-medium text-gray-900">{m.label}</span>
               <span className="block text-xs text-gray-500">{m.description}</span>
@@ -137,6 +150,12 @@ export default function FeaturesCard() {
               className="mt-1 h-4 w-4 accent-[#F15A24]"
             />
           </label>
+          {on[m.key] && extras[m.key] && (
+            <div className="ml-4 pl-4 border-l-2 border-orange-100 space-y-6 pb-2">
+              {extras[m.key]}
+            </div>
+          )}
+          </Fragment>
         ))}
         {on?.orders && (
           <div className="ml-4 pl-4 border-l-2 border-orange-100 space-y-2">
