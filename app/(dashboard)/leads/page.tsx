@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { BellRing } from 'lucide-react'
 import AddLeadDialog from './add-lead-dialog'
 import LeadList from './lead-list'
+import type { InteractionRow } from './[id]/interaction-log'
 import ExportCsvButton from '@/components/export-csv-button'
 import { LEAD_STATUSES, type LeadStatus } from '@/types'
 
@@ -24,7 +25,7 @@ export default async function LeadsPage() {
 
   const today = localDateStr(new Date())
 
-  const [{ data: leads }, { count: dueCount }] = await Promise.all([
+  const [{ data: leads }, { count: dueCount }, { data: interactions }] = await Promise.all([
     supabase
       .from('leads')
       .select('id, name, phone, interest, status, created_at')
@@ -35,7 +36,26 @@ export default async function LeadsPage() {
       .select('id', { count: 'exact', head: true })
       .eq('business_id', business.id)
       .eq('follow_up_date', today),
+    supabase
+      .from('lead_interactions')
+      .select('id, lead_id, type, notes, occurred_at, duration_minutes, location, amount, follow_up_date')
+      .eq('business_id', business.id)
+      .order('occurred_at', { ascending: false }),
   ])
+
+  const interactionsByLead: Record<string, InteractionRow[]> = {}
+  for (const i of interactions ?? []) {
+    ;(interactionsByLead[i.lead_id] ??= []).push({
+      id: i.id,
+      type: i.type,
+      notes: i.notes,
+      occurredAt: i.occurred_at,
+      durationMinutes: i.duration_minutes,
+      location: i.location,
+      amount: i.amount,
+      followUpDate: i.follow_up_date,
+    })
+  }
 
   const csvRows = (leads ?? []).map((l: any) => [
     l.name,
@@ -75,7 +95,7 @@ export default async function LeadsPage() {
         </div>
       </div>
 
-      <LeadList leads={leads ?? []} />
+      <LeadList leads={leads ?? []} interactionsByLead={interactionsByLead} />
     </div>
   )
 }

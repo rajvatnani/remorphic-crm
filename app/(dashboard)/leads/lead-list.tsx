@@ -1,10 +1,11 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import Link from 'next/link'
+import { Fragment, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { deleteLead } from '@/app/actions/leads'
 import EditLeadDialog from './edit-lead-dialog'
+import AddInteractionDialog from './[id]/add-interaction-dialog'
+import InteractionLog, { type InteractionRow } from './[id]/interaction-log'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -15,7 +16,7 @@ import {
 } from '@/components/ui/table'
 import { SortableHead, toggleSort, type SortState } from '@/components/ui/sortable-table-head'
 import { LEAD_STATUSES, type LeadStatus } from '@/types'
-import { Search, Trash2 } from 'lucide-react'
+import { Search, Trash2, ChevronDown } from 'lucide-react'
 
 interface LeadRow {
   id: string
@@ -52,7 +53,24 @@ function cmp(a: string, b: string) {
   return a < b ? -1 : a > b ? 1 : 0
 }
 
-export default function LeadList({ leads }: { leads: LeadRow[] }) {
+export default function LeadList({
+  leads,
+  interactionsByLead,
+}: {
+  leads: LeadRow[]
+  interactionsByLead: Record<string, InteractionRow[]>
+}) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+
+  function setOpen(id: string, open: boolean) {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      if (open) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all')
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -155,43 +173,65 @@ export default function LeadList({ leads }: { leads: LeadRow[] }) {
                 </TableCell>
               </TableRow>
             )}
-            {sorted.map(row => (
-              <TableRow key={row.id} className="hover:bg-gray-50">
-                <TableCell>
-                  <span className="font-medium text-gray-900">{row.name}</span>
-                </TableCell>
-                <TableCell className="text-gray-600">{row.phone}</TableCell>
-                <TableCell className="text-gray-600">{row.interest || '—'}</TableCell>
-                <TableCell>
-                  <Badge className={STATUS_STYLES[row.status]}>
-                    {STATUS_LABELS[row.status]}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-gray-600">{formatDate(row.created_at)}</TableCell>
-                <TableCell className="text-right">
-                  <Link
-                    href={`/leads/${row.id}`}
-                    className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-orange-50"
-                    style={{ color: '#F15A24', borderColor: '#F15A24' }}
-                  >
-                    View Interactions →
-                  </Link>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <EditLeadDialog lead={row} />
-                    <button
-                      onClick={() => handleDelete(row.id, row.name)}
-                      disabled={deletingId === row.id}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
-                      title="Delete lead"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            {sorted.map(row => {
+              const rowInteractions = interactionsByLead[row.id] ?? []
+              const isOpen = expanded.has(row.id)
+              return (
+                <Fragment key={row.id}>
+                  <TableRow className={`hover:bg-gray-50 ${isOpen ? 'bg-orange-50/40 border-b-0' : ''}`}>
+                    <TableCell>
+                      <span className="font-medium text-gray-900">{row.name}</span>
+                    </TableCell>
+                    <TableCell className="text-gray-600">{row.phone}</TableCell>
+                    <TableCell className="text-gray-600">{row.interest || '—'}</TableCell>
+                    <TableCell>
+                      <Badge className={STATUS_STYLES[row.status]}>
+                        {STATUS_LABELS[row.status]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-gray-600">{formatDate(row.created_at)}</TableCell>
+                    <TableCell className="text-right">
+                      <button
+                        type="button"
+                        onClick={() => setOpen(row.id, !isOpen)}
+                        aria-expanded={isOpen}
+                        className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-orange-50 whitespace-nowrap"
+                        style={{ color: '#F15A24', borderColor: '#F15A24' }}
+                      >
+                        Interactions ({rowInteractions.length})
+                        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <AddInteractionDialog
+                          leadId={row.id}
+                          leadName={row.name}
+                          compact
+                          onAdded={() => setOpen(row.id, true)}
+                        />
+                        <EditLeadDialog lead={row} />
+                        <button
+                          onClick={() => handleDelete(row.id, row.name)}
+                          disabled={deletingId === row.id}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                          title="Delete lead"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                  {isOpen && (
+                    <TableRow className="bg-orange-50/40 hover:bg-orange-50/40">
+                      <TableCell colSpan={7} className="px-4 pb-4 pt-0 whitespace-normal">
+                        <InteractionLog leadId={row.id} interactions={rowInteractions} />
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </Fragment>
+              )
+            })}
           </TableBody>
         </Table>
       </div>
