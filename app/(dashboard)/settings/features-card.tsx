@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { MODULES, enabledModules, type ModuleKey } from '@/lib/modules'
+import { canSendEmail } from '@/app/actions/orders'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 /** Switches each part of the app on or off for this business. Saves on each change. */
@@ -17,6 +18,10 @@ export default function FeaturesCard() {
   const [gstin, setGstin] = useState('')
   const [invoiceNote, setInvoiceNote] = useState('')
   const [invoiceSaved, setInvoiceSaved] = useState(false)
+  const [alertEmail, setAlertEmail] = useState('')
+  const [loginEmail, setLoginEmail] = useState('')
+  const [emailReady, setEmailReady] = useState(true)
+  const [alertSaved, setAlertSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -29,7 +34,10 @@ export default function FeaturesCard() {
       setSlug(data.slug ?? '')
       setGstin(data.gstin ?? '')
       setInvoiceNote(data.invoice_note ?? '')
+      setAlertEmail(data.order_alert_email ?? '')
     })
+    createClient().auth.getUser().then(({ data }) => setLoginEmail(data.user?.email ?? ''))
+    canSendEmail().then(setEmailReady)
   }, [])
 
   function toggle(key: ModuleKey, column: string, value: boolean) {
@@ -82,6 +90,25 @@ export default function FeaturesCard() {
         return
       }
       setInvoiceSaved(true)
+    })
+  }
+
+  function saveAlertEmail(e: React.FormEvent) {
+    e.preventDefault()
+    if (!businessId) return
+    const value = alertEmail.trim()
+    if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) { setError('Enter a valid email address, or leave it blank.'); return }
+    setError(null)
+    setAlertSaved(false)
+    startTransition(async () => {
+      const { error } = await createClient().from('businesses').update({ order_alert_email: value || null }).eq('id', businessId)
+      if (error) {
+        setError(error.message.includes('column')
+          ? 'Order emails cannot be saved until the database update for them has been run.'
+          : error.message)
+        return
+      }
+      setAlertSaved(true)
     })
   }
 
@@ -140,6 +167,34 @@ export default function FeaturesCard() {
                 <a href={shopUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-gray-600 hover:underline whitespace-nowrap">Open</a>
               </div>
             )}
+            <form onSubmit={saveAlertEmail} className="space-y-2 pt-2">
+              <span className="block text-sm font-medium text-gray-900">Email new shop orders to</span>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={alertEmail}
+                  onChange={e => { setAlertEmail(e.target.value); setAlertSaved(false) }}
+                  placeholder="Leave blank for no emails"
+                  className="flex-1 min-w-0 h-8 rounded-lg border border-input px-2.5 text-sm outline-none"
+                />
+                <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#F15A24' }}>
+                  Save
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                {loginEmail && alertEmail.trim() !== loginEmail && (
+                  <button type="button" onClick={() => { setAlertEmail(loginEmail); setAlertSaved(false) }} className="text-[#F15A24] hover:underline">
+                    Use {loginEmail}
+                  </button>
+                )}
+                {alertSaved && <span className="text-green-600">Saved</span>}
+              </div>
+              {!emailReady && alertEmail.trim() && (
+                <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5">
+                  Saved, but emails will start only once email sending is set up for Custozo. WhatsApp alerts carry on meanwhile.
+                </p>
+              )}
+            </form>
             <form onSubmit={saveInvoiceDetails} className="space-y-2 pt-2">
               <span className="block text-sm font-medium text-gray-900">Invoice details</span>
               <input

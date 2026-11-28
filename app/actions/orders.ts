@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { emailConfigured } from '@/lib/email'
 import { normalizePhone, isValidPhone } from '@/lib/phone'
 import { toPaise } from '@/lib/money'
 import type { OrderStatus } from '@/types'
@@ -313,4 +314,9 @@ export async function getStockMoves(itemId: string): Promise<StockMove[]> {
     .order('created_at', { ascending: false })
     .limit(100)
   return (data ?? []) as unknown as StockMove[]
+}
+
+/** Whether this server can send emails (Resend settings present) */
+export async function canSendEmail(): Promise<boolean> {
+  return emailConfigured()
 }
