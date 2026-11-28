@@ -36,6 +36,7 @@ export interface ShopItem {
   mrp_paise: number | null
   tags: string[]
   photos: string[]
+  created_at: string
 }
 
 export interface ShopCategory {
@@ -51,13 +52,17 @@ export interface ShopBusiness {
   photo: string | null
   phone: string | null
   payment_qr: string | null
+  shop_description?: string | null
+  upi_id?: string | null
+  delivery_flat_paise?: number
+  free_delivery_above_paise?: number | null
 }
 
 export async function getShopData(slug: string): Promise<{ business: ShopBusiness; items: ShopItem[]; categories: ShopCategory[] } | null> {
   const admin = adminClient()
   const { data: business } = await admin
     .from('businesses')
-    .select('id, name, slug, address, photo, phone, payment_qr, orders_enabled, shop_enabled')
+    .select('id, name, slug, address, photo, phone, payment_qr, orders_enabled, shop_enabled, shop_description, upi_id, delivery_flat_paise, free_delivery_above_paise, show_sold_out')
     .eq('slug', String(slug))
     .maybeSingle()
   if (!business || !business.orders_enabled || !business.shop_enabled) return null
@@ -65,7 +70,7 @@ export async function getShopData(slug: string): Promise<{ business: ShopBusines
   const [{ data: items }, { data: categories }] = await Promise.all([
     admin
       .from('items')
-      .select('id, name, code, description, price_paise, stock, photo_url, category_id, mrp_paise, tags, photos')
+      .select('id, name, code, description, price_paise, stock, photo_url, category_id, mrp_paise, tags, photos, created_at')
       .eq('business_id', business.id)
       .eq('active', true)
       .eq('archived', false)
@@ -78,9 +83,10 @@ export async function getShopData(slug: string): Promise<{ business: ShopBusines
       .order('name'),
   ])
 
-  const { orders_enabled: _o, shop_enabled: _s, ...pub } = business
+  const { orders_enabled: _o, shop_enabled: _s, show_sold_out: showSoldOut, ...pub } = business
   void _o; void _s
-  const list = (items ?? []) as ShopItem[]
+  // The business can hide sold-out items instead of showing them greyed out
+  const list = ((items ?? []) as ShopItem[]).filter(i => showSoldOut !== false || i.stock == null || i.stock > 0)
   return {
     business: pub as ShopBusiness,
     items: list,
@@ -102,6 +108,8 @@ export async function placeShopOrder(input: {
   name: string
   phone: string
   address: string
+  city?: string
+  pincode?: string
   note: string
   lines: { item_id: string; qty: number }[]
 }): Promise<PlaceOrderResult> {
@@ -110,9 +118,12 @@ export async function placeShopOrder(input: {
   const phone = normalizePhone(String(input.phone ?? ''))
   const address = String(input.address ?? '').trim().slice(0, 500)
   const note = String(input.note ?? '').trim().slice(0, 300)
+  const city = String(input.city ?? '').trim().slice(0, 80)
+  const pincode = String(input.pincode ?? '').replace(/\D/g, '')
 
   if (!name) return { ok: false, error: 'Please enter your name.' }
   if (!isValidPhone(phone)) return { ok: false, error: 'Please enter a valid mobile number.' }
+  if (pincode && !/^[1-9]\d{5}$/.test(pincode)) return { ok: false, error: 'Please enter a 6-digit pincode, or leave it blank.' }
   if (!UUID_RE.test(String(input.businessId))) return { ok: false, error: 'This shop is not available.' }
 
   const lines = (Array.isArray(input.lines) ? input.lines : [])
@@ -124,7 +135,7 @@ export async function placeShopOrder(input: {
 
   const ip = (await headers()).get('x-forwarded-for')?.split(',')[0].trim()
   const admin = adminClient()
-  const { data, error } = await admin.rpc('place_shop_order', {
+  const { data, error } = await admin.rpc('place_shop_order2', {
     p_business_id: input.businessId,
     p_name: name,
     p_phone: phone,
@@ -132,10 +143,12 @@ export async function placeShopOrder(input: {
     p_note: note,
     p_lines: lines,
     p_ip_hash: ip ? keyedHash(`ip:${ip}`) : null,
+    p_city: city,
+    p_pincode: pincode,
   })
 
   if (error || !data) {
-    console.error('[Shop] place_shop_order failed:', error?.code)
+    console.error('[Shop] place_shop_order2 failed:', error?.code)
     return { ok: false, error: 'Could not place your order. Please try again.' }
   }
 
@@ -164,23 +177,25 @@ export async function placeShopOrder(input: {
   // Tell the owner on WhatsApp and by email. The order stands whether or not these are sent.
   const [{ data: business }, { data: order }] = await Promise.all([
     admin.from('businesses').select('name, phone, order_alert_email').eq('id', input.businessId).single(),
-    admin.from('orders').select('order_no, order_items(name, qty, price_paise)').eq('id', data.order_id).single(),
+    admin.from('orders').select('order_no, delivery_paise, order_items(name, qty, price_paise)').eq('id', data.order_id).single(),
   ])
   if (business && order) {
     const lines = order.order_items as { name: string; qty: number; price_paise: number }[]
-    const total = lines.reduce((s, l) => s + l.qty * l.price_paise, 0)
+    const total = lines.reduce((s, l) => s + l.qty * l.price_paise, 0) + (order.delivery_paise ?? 0)
+    const fullAddress = [address, city, pincode].filter(Boolean).join(', ')
 
     const alerts: Promise<unknown>[] = []
     if (business.phone) {
       const list = lines.map(l => `• ${l.qty} × ${l.name}`).join('\n')
       alerts.push(sendWhatsApp(
         business.phone,
-        `🛍️ New shop order #${order.order_no}\n\n*${name}* (${phone})\n${list}\nTotal ${formatRupees(total)}\n\nOpen Custozo → Orders to confirm.`
+        `🛍️ New shop order #${order.order_no}\n\n*${name}* (${phone})${fullAddress ? `\n${fullAddress}` : '\nWill collect'}\n${list}${order.delivery_paise ? `\nDelivery ${formatRupees(order.delivery_paise)}` : ''}\nTotal ${formatRupees(total)}\n\nOpen Custozo → Orders to confirm.`
       ))
     }
     if (business.order_alert_email && EMAIL_RE.test(business.order_alert_email)) {
       alerts.push(sendEmail(business.order_alert_email, ...orderEmail({
-        businessName: business.name, orderNo: order.order_no, name, phone, address, note, lines, total,
+        businessName: business.name, orderNo: order.order_no, name, phone, address: fullAddress, note, lines, total,
+        delivery: order.delivery_paise ?? 0,
       })))
     }
     await Promise.all(alerts)
@@ -211,14 +226,14 @@ export async function getShopOrder(slug: string, token: string): Promise<ShopOrd
   const admin = adminClient()
   const { data: order } = await admin
     .from('orders')
-    .select('order_no, status, payment_status, paid_paise, delivery_paise, discount_paise, address, notes, created_at, business_id, payment_screenshot, customers(name), order_items(name, qty, price_paise)')
+    .select('order_no, status, payment_status, paid_paise, delivery_paise, discount_paise, address, city, pincode, notes, created_at, business_id, payment_screenshot, customers(name), order_items(name, qty, price_paise)')
     .eq('public_token', token)
     .maybeSingle()
   if (!order) return null
 
   const { data: business } = await admin
     .from('businesses')
-    .select('id, name, slug, address, photo, phone, payment_qr')
+    .select('id, name, slug, address, photo, phone, payment_qr, upi_id')
     .eq('id', order.business_id)
     .single()
   if (!business || business.slug !== slug) return null
@@ -231,7 +246,7 @@ export async function getShopOrder(slug: string, token: string): Promise<ShopOrd
     paid_paise: order.paid_paise,
     delivery_paise: order.delivery_paise,
     discount_paise: order.discount_paise,
-    address: order.address,
+    address: [order.address, order.city, order.pincode].filter(Boolean).join(', ') || null,
     notes: order.notes,
     created_at: order.created_at,
     customer_name: customer?.name ?? '',
@@ -319,7 +334,7 @@ export interface InvoiceView {
   address: string | null
   customer: { name: string; phone: string }
   lines: { name: string; qty: number; price_paise: number }[]
-  business: { name: string; address: string | null; phone: string | null; photo: string | null; gstin: string | null; invoice_note: string | null; payment_qr: string | null }
+  business: { name: string; address: string | null; phone: string | null; photo: string | null; gstin: string | null; invoice_note: string | null; payment_qr: string | null; upi_id: string | null }
 }
 
 /**
@@ -331,22 +346,23 @@ export async function getInvoice(token: string): Promise<InvoiceView | null> {
   const admin = adminClient()
   const { data: order } = await admin
     .from('orders')
-    .select('order_no, status, created_at, delivered_at, payment_status, paid_paise, delivery_paise, discount_paise, address, business_id, customers(name, phone), order_items(name, qty, price_paise)')
+    .select('order_no, status, created_at, delivered_at, payment_status, paid_paise, delivery_paise, discount_paise, address, city, pincode, business_id, customers(name, phone), order_items(name, qty, price_paise)')
     .eq('public_token', token)
     .maybeSingle()
   if (!order || !['confirmed', 'ready', 'delivered'].includes(order.status)) return null
 
   const { data: business } = await admin
     .from('businesses')
-    .select('name, address, phone, photo, gstin, invoice_note, payment_qr')
+    .select('name, address, phone, photo, gstin, invoice_note, payment_qr, upi_id')
     .eq('id', order.business_id)
     .single()
   if (!business) return null
 
-  const { business_id: _b, customers, order_items, ...rest } = order
+  const { business_id: _b, customers, order_items, city, pincode, ...rest } = order
   void _b
   return {
     ...rest,
+    address: [rest.address, city, pincode].filter(Boolean).join(', ') || null,
     customer: (customers as unknown as { name: string; phone: string } | null) ?? { name: '', phone: '' },
     lines: order_items as InvoiceView['lines'],
     business,
@@ -362,12 +378,13 @@ function orderEmail(o: {
   note: string
   lines: { name: string; qty: number; price_paise: number }[]
   total: number
+  delivery?: number
 }): [string, string, string] {
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
   const subject = `New order #${o.orderNo} for ${formatRupees(o.total)} from ${o.name}`
   const rows = o.lines.map(l =>
     `<tr><td style="padding:4px 12px 4px 0">${l.qty} × ${escapeHtml(l.name)}</td><td style="padding:4px 0;text-align:right">${formatRupees(l.qty * l.price_paise)}</td></tr>`
-  ).join('')
+  ).join('') + (o.delivery ? `<tr><td style="padding:4px 12px 4px 0">Delivery</td><td style="padding:4px 0;text-align:right">${formatRupees(o.delivery)}</td></tr>` : '')
   const html = `<div style="font-family:Arial,sans-serif;font-size:14px;color:#111">
 <p style="font-size:18px;font-weight:bold;margin:0 0 12px">New order #${o.orderNo} at ${escapeHtml(o.businessName)}</p>
 <p style="margin:0 0 12px"><b>${escapeHtml(o.name)}</b> · ${escapeHtml(o.phone)}${o.address ? `<br>${escapeHtml(o.address)}` : ''}${o.note ? `<br><i>${escapeHtml(o.note)}</i>` : ''}</p>
@@ -379,6 +396,7 @@ ${appUrl ? `<p><a href="${appUrl}/orders" style="color:#F15A24;font-weight:bold"
     `${o.name} · ${o.phone}`,
     o.address, o.note,
     ...o.lines.map(l => `${l.qty} x ${l.name}: ${formatRupees(l.qty * l.price_paise)}`),
+    o.delivery ? `Delivery: ${formatRupees(o.delivery)}` : '',
     `Total ${formatRupees(o.total)}`,
     appUrl ? `${appUrl}/orders` : 'Open Custozo > Orders to confirm.',
   ].filter(Boolean).join('\n')

@@ -6,6 +6,7 @@ import { formatRupees } from '@/lib/money'
 import { CheckCircle, MessageCircle, FileText } from 'lucide-react'
 import { hasInvoice } from '@/types'
 import PaymentUpload from './payment-upload'
+import UpiPay from '@/components/shop/upi-pay'
 
 export const metadata: Metadata = {
   title: 'Your order',
@@ -76,8 +77,10 @@ export default async function ShopOrderPage({ params }: { params: Promise<{ slug
 
         {order.status !== 'cancelled' && order.payment_status !== 'paid' && due > 0 && (
           <div className="bg-white rounded-3xl shadow-sm p-5 text-center space-y-3">
-            <p className="font-semibold text-gray-900">Pay {formatRupees(due)}</p>
-            {order.business.payment_qr && (
+            {!order.business.upi_id && <p className="font-semibold text-gray-900">Pay {formatRupees(due)}</p>}
+            {order.business.upi_id ? (
+              <UpiPay upiId={order.business.upi_id} payee={order.business.name} amountPaise={due} note={`Order ${order.order_no}`} />
+            ) : order.business.payment_qr && (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={order.business.payment_qr} alt="Payment QR code" className="w-48 h-48 object-contain mx-auto rounded-xl" />

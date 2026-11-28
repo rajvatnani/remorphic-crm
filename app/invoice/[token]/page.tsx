@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { getInvoice } from '@/app/actions/shop'
 import { formatRupees } from '@/lib/money'
 import PrintButton from './print-button'
+import UpiPay from '@/components/shop/upi-pay'
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
   const { token } = await params
@@ -104,7 +105,12 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
             <div className="flex justify-between text-gray-500"><span>Payment</span><span>{PAYMENT_LABEL[inv.payment_status] ?? inv.payment_status}</span></div>
           </div>
 
-          {balance > 0 && b.payment_qr && (
+          {balance > 0 && b.upi_id && (
+            <div className="rounded-xl border border-gray-200 p-4">
+              <UpiPay compact upiId={b.upi_id} payee={b.name} amountPaise={balance} note={`Invoice ${inv.order_no}`} />
+            </div>
+          )}
+          {balance > 0 && !b.upi_id && b.payment_qr && (
             <div className="flex items-center gap-4 rounded-xl border border-gray-200 p-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={b.payment_qr} alt="Payment QR code" className="h-28 w-28 object-contain" />

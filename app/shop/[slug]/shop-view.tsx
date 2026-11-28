@@ -110,23 +110,36 @@ export default function ShopView({
   business,
   items,
   categories = [],
+  initialCategory,
+  initialItem,
 }: {
   business: ShopBusiness
   items: ShopItem[]
   categories?: ShopCategory[]
+  /** From a category link: /shop/<slug>?category=<id> */
+  initialCategory?: string
+  /** From an item link: /shop/<slug>?item=<code> */
+  initialItem?: string
 }) {
-  const [category, setCategory] = useState<string>('all')
+  const [category, setCategory] = useState<string>(
+    initialCategory && categories.some(c => c.id === initialCategory) ? initialCategory : 'all'
+  )
+  const [sort, setSort] = useState<'new' | 'low' | 'high' | 'name'>('new')
   const router = useRouter()
   const storageKey = `custozo-cart-${business.slug}`
   const [cart, setCart] = useState<Cart>({})
   const [loaded, setLoaded] = useState(false)
   const [search, setSearch] = useState('')
   const [view, setView] = useState<'browse' | 'cart'>('browse')
-  const [detail, setDetail] = useState<ShopItem | null>(null)
+  const [detail, setDetail] = useState<ShopItem | null>(
+    () => (initialItem ? items.find(i => i.code?.toLowerCase() === initialItem.toLowerCase()) ?? null : null)
+  )
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
+  const [city, setCity] = useState('')
+  const [pincode, setPincode] = useState('')
   const [note, setNote] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -150,6 +163,8 @@ export default function ShopView({
       if (details?.name) setName(details.name)
       if (details?.phone) setPhone(details.phone)
       if (details?.address) setAddress(details.address)
+      if (details?.city) setCity(details.city)
+      if (details?.pincode) setPincode(details.pincode)
     } catch {
       // storage blocked: the cart still works for this visit
     }
@@ -174,14 +189,23 @@ export default function ShopView({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    return items.filter(i => {
+    const list = items.filter(i => {
       if (category !== 'all' && i.category_id !== category) return false
       return !q ||
         i.name.toLowerCase().includes(q) ||
         (i.code ?? '').toLowerCase().includes(q) ||
         (i.description ?? '').toLowerCase().includes(q)
     })
-  }, [items, search, category])
+    const soldOut = (i: ShopItem) => (i.stock != null && i.stock <= 0 ? 1 : 0)
+    return [...list].sort((a, b) =>
+      // Sold-out items always last
+      soldOut(a) - soldOut(b) ||
+      (sort === 'low' ? a.price_paise - b.price_paise
+        : sort === 'high' ? b.price_paise - a.price_paise
+        : sort === 'name' ? a.name.localeCompare(b.name)
+        : b.created_at.localeCompare(a.created_at))
+    )
+  }, [items, search, category, sort])
 
   // With "All" picked, show items under category headings, in the business's order
   const groups = useMemo(() => {
@@ -195,7 +219,12 @@ export default function ShopView({
 
   const cartLines = items.filter(i => cart[i.id])
   const count = cartLines.reduce((s, i) => s + cart[i.id], 0)
-  const total = cartLines.reduce((s, i) => s + cart[i.id] * i.price_paise, 0)
+  const subtotal = cartLines.reduce((s, i) => s + cart[i.id] * i.price_paise, 0)
+  // Same rule as the database: delivery only when there is an address, free above the limit
+  const freeAbove = business.free_delivery_above_paise ?? null
+  const freeByRule = freeAbove !== null && subtotal >= freeAbove
+  const delivery = !address.trim() || freeByRule ? 0 : business.delivery_flat_paise ?? 0
+  const total = subtotal + delivery
 
   function handlePlace(e: React.FormEvent) {
     e.preventDefault()
@@ -203,13 +232,13 @@ export default function ShopView({
     startTransition(async () => {
       const res = await placeShopOrder({
         businessId: business.id,
-        name, phone, address, note,
+        name, phone, address, city, pincode, note,
         lines: cartLines.map(i => ({ item_id: i.id, qty: cart[i.id] })),
       })
       if (!res.ok) { setError(res.error); return }
       try {
         window.localStorage.removeItem(storageKey)
-        window.localStorage.setItem('custozo-shopper', JSON.stringify({ name, phone, address }))
+        window.localStorage.setItem('custozo-shopper', JSON.stringify({ name, phone, address, city, pincode }))
       } catch { /* ignore */ }
       router.push(`/shop/${business.slug}/order/${res.token}`)
     })
@@ -238,6 +267,17 @@ export default function ShopView({
                     <QtyControl item={item} q={cart[item.id] ?? 0} setQty={setQty} />
                   </div>
                 ))}
+                {(business.delivery_flat_paise ?? 0) > 0 && (
+                  <div className="p-3 text-sm space-y-1">
+                    <div className="flex justify-between text-gray-600">
+                      <span>Delivery</span>
+                      <span>{!address.trim() ? 'None if you collect' : delivery === 0 ? 'Free' : formatRupees(delivery)}</span>
+                    </div>
+                    {freeAbove !== null && !freeByRule && (
+                      <p className="text-xs text-green-700">Add {formatRupees(freeAbove - subtotal)} more for free delivery.</p>
+                    )}
+                  </div>
+                )}
                 <div className="flex justify-between p-3 font-semibold">
                   <span>Total</span>
                   <span>{formatRupees(total)}</span>
@@ -257,6 +297,18 @@ export default function ShopView({
                   <label className="text-sm font-medium text-gray-700" htmlFor="s_address">Delivery address <span className="text-gray-400 font-normal">(leave blank to collect)</span></label>
                   <textarea id="s_address" value={address} onChange={e => setAddress(e.target.value)} rows={2} className="w-full px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm" />
                 </div>
+                {address.trim() && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700" htmlFor="s_city">City</label>
+                      <input id="s_city" value={city} onChange={e => setCity(e.target.value)} className="w-full h-11 px-4 rounded-xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-sm font-medium text-gray-700" htmlFor="s_pin">Pincode</label>
+                      <input id="s_pin" value={pincode} onChange={e => setPincode(e.target.value)} inputMode="numeric" maxLength={7} className="w-full h-11 px-4 rounded-xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm" />
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700" htmlFor="s_note">Note <span className="text-gray-400 font-normal">(optional)</span></label>
                   <input id="s_note" value={note} onChange={e => setNote(e.target.value)} placeholder="Size, colour, gift wrap…" className="w-full h-11 px-4 rounded-xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm" />
@@ -288,6 +340,7 @@ export default function ShopView({
             </div>
           )}
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">{business.name}</h1>
+          {business.shop_description && <p className="text-gray-600 mt-1">{business.shop_description}</p>}
           {business.address && (
             <p className="flex items-center justify-center gap-1 text-gray-500 text-sm mt-1">
               <MapPin className="w-3.5 h-3.5 shrink-0" />{business.address}
@@ -295,8 +348,9 @@ export default function ShopView({
           )}
         </div>
 
+        <div className="flex gap-2 mb-4">
         {items.length > 6 && (
-          <div className="relative mb-4">
+          <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <input
               value={search}
@@ -306,6 +360,20 @@ export default function ShopView({
             />
           </div>
         )}
+        {items.length > 1 && (
+          <select
+            value={sort}
+            onChange={e => setSort(e.target.value as typeof sort)}
+            aria-label="Sort items"
+            className={`h-11 rounded-2xl border-2 border-gray-200 bg-white px-3 text-sm outline-none focus:border-[#F15A24] ${items.length > 6 ? '' : 'ml-auto'}`}
+          >
+            <option value="new">Newest first</option>
+            <option value="low">Price: low to high</option>
+            <option value="high">Price: high to low</option>
+            <option value="name">Name</option>
+          </select>
+        )}
+        </div>
 
         {categories.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-4 px-4">
@@ -334,7 +402,7 @@ export default function ShopView({
           {group.items.map(item => {
             const left = item.stock
             return (
-              <div key={item.id} onClick={() => setDetail(item)} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer flex flex-col">
+              <div key={item.id} onClick={() => setDetail(item)} className={`bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer flex flex-col ${item.stock != null && item.stock <= 0 ? 'opacity-60 grayscale' : ''}`}>
                 <div className="relative">
                   <Photo item={item} className="w-full aspect-square" />
                   <Tags item={item} />

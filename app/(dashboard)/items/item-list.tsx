@@ -11,19 +11,29 @@ import StockDialog from './stock-dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, Search, Tags, Copy, Archive, ArchiveRestore } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Tags, Copy, Archive, ArchiveRestore, Link2, Check } from 'lucide-react'
 
 export default function ItemList({
   items,
   categories,
   businessId,
   defaultLowStock,
+  shopPath,
 }: {
   items: Item[]
   categories: ItemCategory[]
   businessId: string
   defaultLowStock: number
+  /** /shop/<slug> when the shop link is on, for copying item links */
+  shopPath: string | null
 }) {
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  function copyLink(key: string, query: string) {
+    if (!shopPath) return
+    navigator.clipboard?.writeText(`${window.location.origin}${shopPath}?${query}`)
+    setCopiedId(key)
+    setTimeout(() => setCopiedId(c => (c === key ? null : c)), 2000)
+  }
   const [showArchived, setShowArchived] = useState(false)
   const [duplicating, setDuplicating] = useState<Item | null>(null)
   const archivedCount = items.filter(i => i.archived).length
@@ -178,6 +188,15 @@ export default function ItemList({
                     <button onClick={() => setEditing(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="Edit item">
                       <Pencil className="h-4 w-4" />
                     </button>
+                    {shopPath && item.code && item.active && !item.archived && (
+                      <button
+                        onClick={() => copyLink(item.id, `item=${encodeURIComponent(item.code!)}`)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+                        title="Copy this item's shop link, to share on WhatsApp"
+                      >
+                        {copiedId === item.id ? <Check className="h-4 w-4 text-green-600" /> : <Link2 className="h-4 w-4" />}
+                      </button>
+                    )}
                     <button onClick={() => setDuplicating(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="Duplicate, to add a variant fast">
                       <Copy className="h-4 w-4" />
                     </button>
@@ -218,6 +237,7 @@ export default function ItemList({
           key={categories.map(c => c.id + c.name).join()}
           categories={categories}
           itemCounts={itemCounts}
+          shopPath={shopPath}
           onClose={() => setManaging(false)}
         />
       )}
