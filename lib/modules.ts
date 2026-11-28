@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ShoppingBag,
   Package,
+  BarChart3,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -42,6 +43,7 @@ export function navItems(business: Business, short = false): { href: string; lab
     { href: '/visits', label: short ? 'Visits' : 'Visit Log', icon: ClipboardList, show: on.visits },
     { href: '/orders', label: 'Orders', icon: ShoppingBag, show: on.orders },
     { href: '/items', label: 'Items', icon: Package, show: on.orders },
+    { href: '/reports', label: 'Reports', icon: BarChart3, show: on.orders },
     { href: '/campaigns', label: 'Campaigns', icon: Megaphone, show: on.visits },
   ]
   return items.filter(i => i.show).map(({ href, label, icon }) => ({ href, label, icon }))
