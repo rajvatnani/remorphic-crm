@@ -185,6 +185,8 @@ export interface Order {
   created_at: string
   source?: 'staff' | 'shop'
   address?: string | null
+  city?: string | null
+  pincode?: string | null
   public_token?: string
   delivered_at?: string | null
   payment_screenshot?: string | null

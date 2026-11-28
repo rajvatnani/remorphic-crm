@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { MODULES, enabledModules, type ModuleKey } from '@/lib/modules'
 import { canSendEmail } from '@/app/actions/orders'
+import ShopSettings from './shop-settings'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 
 /** Switches each part of the app on or off for this business. Saves on each change. */
@@ -217,6 +218,7 @@ export default function FeaturesCard({
                 <a href={shopUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-gray-600 hover:underline whitespace-nowrap">Open</a>
               </div>
             )}
+            {shopOn && businessId && <ShopSettings businessId={businessId} />}
             <form onSubmit={saveItemSettings} className="space-y-2 pt-2">
               <span className="block text-sm font-medium text-gray-900">Items</span>
               <div className="grid grid-cols-2 gap-2">

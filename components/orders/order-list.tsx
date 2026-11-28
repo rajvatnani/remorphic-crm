@@ -134,7 +134,7 @@ function OrderDetail({ order, onEdit }: { order: Order; onEdit: () => void }) {
       </table>
 
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500">
-        {order.address && <span>Deliver to: {order.address}</span>}
+        {order.address && <span>Deliver to: {[order.address, order.city, order.pincode].filter(Boolean).join(', ')}</span>}
         {order.due_date && <span>Due {fmtDate(order.due_date)}</span>}
         {cost != null && order.status !== 'cancelled' && (
           <span>Profit {formatRupees(subtotal - order.discount_paise - cost)}</span>

@@ -21,6 +21,7 @@ export default async function ItemsPage() {
       categories={(categories ?? []) as ItemCategory[]}
       businessId={business.id}
       defaultLowStock={business.default_low_stock ?? 2}
+      shopPath={business.shop_enabled ? `/shop/${business.slug}` : null}
     />
   )
 }

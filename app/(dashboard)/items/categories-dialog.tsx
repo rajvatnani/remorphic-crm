@@ -7,17 +7,20 @@ import type { ItemCategory } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { ArrowUp, ArrowDown, Trash2, Check } from 'lucide-react'
+import { ArrowUp, ArrowDown, Trash2, Check, Link2 } from 'lucide-react'
 
 export default function CategoriesDialog({
   categories,
   itemCounts,
+  shopPath = null,
   onClose,
 }: {
   categories: ItemCategory[]
   itemCounts: Record<string, number>
+  shopPath?: string | null
   onClose: () => void
 }) {
+  const [copied, setCopied] = useState<string | null>(null)
   const router = useRouter()
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -77,6 +80,19 @@ export default function CategoriesDialog({
                       <ArrowDown className="h-4 w-4" />
                     </button>
                   </>
+                )}
+                {shopPath && !changed && (
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(`${window.location.origin}${shopPath}?category=${c.id}`)
+                      setCopied(c.id)
+                      setTimeout(() => setCopied(x => (x === c.id ? null : x)), 2000)
+                    }}
+                    className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100"
+                    title="Copy this category's shop link"
+                  >
+                    {copied === c.id ? <Check className="h-4 w-4 text-green-600" /> : <Link2 className="h-4 w-4" />}
+                  </button>
                 )}
                 <button
                   onClick={() => {
