@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getShopOrder } from '@/app/actions/shop'
 import { formatRupees } from '@/lib/money'
-import { CheckCircle, MessageCircle } from 'lucide-react'
+import { CheckCircle, MessageCircle, FileText } from 'lucide-react'
+import { hasInvoice } from '@/types'
 
 export const metadata: Metadata = {
   title: 'Your order',
@@ -79,6 +80,15 @@ export default async function ShopOrderPage({ params }: { params: Promise<{ slug
             <img src={order.business.payment_qr} alt="Payment QR code" className="w-48 h-48 object-contain mx-auto rounded-xl" />
             <p className="text-xs text-gray-500 mt-3">Scan with any UPI app, then send the screenshot on WhatsApp.</p>
           </div>
+        )}
+
+        {hasInvoice(order.status) && (
+          <Link
+            href={`/invoice/${token}`}
+            className="w-full h-12 rounded-2xl bg-white border border-gray-200 text-gray-800 font-semibold flex items-center justify-center gap-2"
+          >
+            <FileText className="w-5 h-5" /> View invoice
+          </Link>
         )}
 
         {waNumber && (

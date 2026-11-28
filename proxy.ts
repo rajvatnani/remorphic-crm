@@ -34,7 +34,8 @@ export async function proxy(request: NextRequest) {
     pathname === '/login' ||
     pathname === '/accept-invite' ||
     pathname.startsWith('/book/') ||
-    pathname.startsWith('/shop/')
+    pathname.startsWith('/shop/') ||
+    pathname.startsWith('/invoice/')
 
   if (!user && !isPublic) {
     return NextResponse.redirect(new URL('/login', request.url))

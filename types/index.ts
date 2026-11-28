@@ -22,6 +22,8 @@ export interface Business {
   visits_enabled?: boolean
   orders_enabled?: boolean
   shop_enabled?: boolean
+  gstin?: string | null
+  invoice_note?: string | null
 }
 
 export interface Customer {
@@ -130,7 +132,14 @@ export interface Item {
   stock: number | null
   active: boolean
   photo_url?: string | null
+  category_id?: string | null
   created_at: string
+}
+
+export interface ItemCategory {
+  id: string
+  name: string
+  position: number
 }
 
 export type OrderStatus = 'new' | 'confirmed' | 'ready' | 'delivered' | 'cancelled'
@@ -167,6 +176,8 @@ export interface Order {
   created_at: string
   source?: 'staff' | 'shop'
   address?: string | null
+  public_token?: string
+  delivered_at?: string | null
   customers: { id: string; name: string; phone: string } | null
   order_items: OrderLine[]
 }
@@ -174,4 +185,9 @@ export interface Order {
 export function orderTotal(o: Pick<Order, 'delivery_paise' | 'discount_paise' | 'order_items'>): number {
   const lines = o.order_items.reduce((sum, l) => sum + l.price_paise * l.qty, 0)
   return Math.max(lines + o.delivery_paise - o.discount_paise, 0)
+}
+
+/** Orders that have an invoice: confirmed or later, not cancelled */
+export function hasInvoice(status: OrderStatus | string) {
+  return status === 'confirmed' || status === 'ready' || status === 'delivered'
 }

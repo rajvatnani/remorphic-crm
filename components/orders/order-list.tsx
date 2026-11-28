@@ -5,12 +5,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { setOrderStatus, setOrderPayment } from '@/app/actions/orders'
 import { formatRupees, toRupeesInput } from '@/lib/money'
-import { ORDER_STATUSES, orderTotal, type Item, type Order, type OrderStatus } from '@/types'
+import { ORDER_STATUSES, orderTotal, hasInvoice, type Item, type ItemCategory, type Order, type OrderStatus } from '@/types'
 import OrderDialog, { type CustomerOption } from './order-dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ChevronDown, Plus, Search, Pencil } from 'lucide-react'
+import { ChevronDown, Plus, Search, Pencil, FileText, MessageCircle } from 'lucide-react'
 
 const STATUS_STYLE: Record<OrderStatus, string> = {
   new: 'bg-purple-50 text-purple-700',
@@ -58,6 +58,36 @@ function inTab(o: Order, tab: Tab) {
 
 function fmtDate(d: string) {
   return new Date(d.length === 10 ? d + 'T00:00:00' : d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function InvoiceButtons({ order, total }: { order: Order; total: number }) {
+  const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/invoice/${order.public_token}`
+  const phone = (order.customers?.phone ?? '').replace(/\D/g, '')
+  const text = encodeURIComponent(
+    `Hi ${order.customers?.name ?? ''}, here is the invoice for your order #${order.order_no} (${formatRupees(total)}): ${url}`
+  )
+  return (
+    <>
+      <a
+        href={`/invoice/${order.public_token}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-gray-200 text-[0.8rem] font-medium text-gray-700 hover:bg-gray-50"
+      >
+        <FileText className="h-3.5 w-3.5" /> Invoice
+      </a>
+      {phone && (
+        <a
+          href={`https://wa.me/${phone}?text=${text}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-green-200 text-[0.8rem] font-medium text-green-700 hover:bg-green-50"
+        >
+          <MessageCircle className="h-3.5 w-3.5" /> Send invoice
+        </a>
+      )}
+    </>
+  )
 }
 
 function OrderDetail({ order, onEdit }: { order: Order; onEdit: () => void }) {
@@ -139,6 +169,7 @@ function OrderDetail({ order, onEdit }: { order: Order; onEdit: () => void }) {
             Reopen
           </Button>
         )}
+        {hasInvoice(order.status) && order.public_token && <InvoiceButtons order={order} total={total} />}
       </div>
 
       {order.status !== 'cancelled' && (
@@ -179,7 +210,9 @@ export default function OrderList({
   fixedCustomerId,
   openNewFor,
   compact = false,
+  categories = [],
 }: {
+  categories?: ItemCategory[]
   orders: Order[]
   items: Item[]
   customers: CustomerOption[]
@@ -358,6 +391,7 @@ export default function OrderList({
           customers={customers}
           customerLabel={customerLabel}
           initialCustomerId={dialog.customerId}
+          categories={categories}
         />
       )}
     </div>

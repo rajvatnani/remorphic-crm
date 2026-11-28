@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { placeShopOrder, type ShopBusiness, type ShopItem } from '@/app/actions/shop'
+import { placeShopOrder, type ShopBusiness, type ShopItem, type ShopCategory } from '@/app/actions/shop'
 import { formatRupees } from '@/lib/money'
 import { MapPin, Search, ShoppingBag, Minus, Plus, X, Package } from 'lucide-react'
 
@@ -55,7 +55,16 @@ function Photo({ item, className }: { item: ShopItem; className: string }) {
   )
 }
 
-export default function ShopView({ business, items }: { business: ShopBusiness; items: ShopItem[] }) {
+export default function ShopView({
+  business,
+  items,
+  categories = [],
+}: {
+  business: ShopBusiness
+  items: ShopItem[]
+  categories?: ShopCategory[]
+}) {
+  const [category, setCategory] = useState<string>('all')
   const router = useRouter()
   const storageKey = `custozo-cart-${business.slug}`
   const [cart, setCart] = useState<Cart>({})
@@ -114,13 +123,24 @@ export default function ShopView({ business, items }: { business: ShopBusiness; 
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return items
-    return items.filter(i =>
-      i.name.toLowerCase().includes(q) ||
-      (i.code ?? '').toLowerCase().includes(q) ||
-      (i.description ?? '').toLowerCase().includes(q)
-    )
-  }, [items, search])
+    return items.filter(i => {
+      if (category !== 'all' && i.category_id !== category) return false
+      return !q ||
+        i.name.toLowerCase().includes(q) ||
+        (i.code ?? '').toLowerCase().includes(q) ||
+        (i.description ?? '').toLowerCase().includes(q)
+    })
+  }, [items, search, category])
+
+  // With "All" picked, show items under category headings, in the business's order
+  const groups = useMemo(() => {
+    if (category !== 'all' || !categories.length) return [{ id: 'all', name: '', items: filtered }]
+    const known = new Set(categories.map(c => c.id))
+    return [
+      ...categories.map(c => ({ id: c.id, name: c.name, items: filtered.filter(i => i.category_id === c.id) })),
+      { id: 'other', name: 'Other', items: filtered.filter(i => !i.category_id || !known.has(i.category_id)) },
+    ].filter(g => g.items.length)
+  }, [category, categories, filtered])
 
   const cartLines = items.filter(i => cart[i.id])
   const count = cartLines.reduce((s, i) => s + cart[i.id], 0)
@@ -236,11 +256,31 @@ export default function ShopView({ business, items }: { business: ShopBusiness; 
           </div>
         )}
 
+        {categories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-4 px-4">
+            {[{ id: 'all', name: 'All' }, ...categories].map(c => (
+              <button
+                key={c.id}
+                onClick={() => setCategory(c.id)}
+                className={`shrink-0 px-4 h-9 rounded-full text-sm font-medium border-2 transition-colors ${
+                  category === c.id ? 'text-white border-transparent' : 'bg-white text-gray-700 border-gray-200'
+                }`}
+                style={category === c.id ? { backgroundColor: '#F15A24' } : undefined}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         {items.length === 0 && <p className="text-center text-gray-500 bg-white rounded-2xl p-8">No items to show yet.</p>}
         {items.length > 0 && filtered.length === 0 && <p className="text-center text-gray-500 py-8">No items match “{search}”.</p>}
 
+        {groups.map(group => (
+        <section key={group.id} className="mb-6">
+        {group.name && <h2 className="text-lg font-bold text-gray-900 mb-3">{group.name}</h2>}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {filtered.map(item => {
+          {group.items.map(item => {
             const left = item.stock
             return (
               <div key={item.id} onClick={() => setDetail(item)} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer flex flex-col">
@@ -259,6 +299,8 @@ export default function ShopView({ business, items }: { business: ShopBusiness; 
             )
           })}
         </div>
+        </section>
+        ))}
       </div>
 
       {/* Item detail */}

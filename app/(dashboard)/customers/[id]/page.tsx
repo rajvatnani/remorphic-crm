@@ -133,6 +133,7 @@ export default async function CustomerDetailPage({
             compact
             orders={orderData.orders}
             items={orderData.items}
+            categories={orderData.categories}
             customers={[{ id: customer.id, name: customer.name, phone: customer.phone }]}
             customerLabel={label}
             fixedCustomerId={customer.id}

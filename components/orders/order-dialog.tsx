@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createOrder, updateOrder, findOrCreateCustomer, type OrderLineInput } from '@/app/actions/orders'
 import { formatRupees, toPaise, toRupeesInput } from '@/lib/money'
-import type { Item, Order } from '@/types'
+import type { Item, ItemCategory, Order } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -47,7 +47,9 @@ export default function OrderDialog({
   customers,
   customerLabel,
   initialCustomerId,
+  categories = [],
 }: {
+  categories?: ItemCategory[]
   open: boolean
   onClose: () => void
   order: Order | null
@@ -73,6 +75,16 @@ export default function OrderDialog({
   const [dueDate, setDueDate] = useState(order?.due_date ?? '')
 
   const activeItems = items.filter(i => i.active)
+  // Item picker grouped by category, in the business's order
+  const itemGroups = [
+    ...categories.map(c => ({ label: c.name, items: activeItems.filter(i => i.category_id === c.id) })),
+    { label: categories.length ? 'Other' : '', items: activeItems.filter(i => !i.category_id || !categories.some(c => c.id === i.category_id)) },
+  ].filter(g => g.items.length)
+  const itemOption = (i: Item) => (
+    <option key={i.id} value={i.id}>
+      {i.name}{i.stock != null ? ` (${i.stock} in stock)` : ''}
+    </option>
+  )
   const selectedCustomer = customers.find(c => c.id === customerId) ?? null
 
   const customerMatches = useMemo(() => {
@@ -212,11 +224,9 @@ export default function OrderDialog({
                         className="w-full h-8 rounded-lg border border-input bg-transparent px-2 text-sm outline-none"
                       >
                         <option value="">Other (type below)</option>
-                        {activeItems.map(i => (
-                          <option key={i.id} value={i.id}>
-                            {i.name}{i.stock != null ? ` (${i.stock} in stock)` : ''}
-                          </option>
-                        ))}
+                        {itemGroups.map(g => g.label
+                          ? <optgroup key={g.label} label={g.label}>{g.items.map(itemOption)}</optgroup>
+                          : g.items.map(itemOption))}
                         {/* An item hidden since, still on this order */}
                         {line.item_id && !activeItems.some(i => i.id === line.item_id) && (
                           <option value={line.item_id}>{line.name}</option>

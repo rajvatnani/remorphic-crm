@@ -17,7 +17,7 @@ export default async function OrdersPage({
   if (!enabledModules(business).orders) return <ModuleOff title="Orders" />
 
   const { new: newFor } = await searchParams
-  const { orders, items, customers } = await loadOrderData(supabase, business.id)
+  const { orders, items, customers, categories } = await loadOrderData(supabase, business.id)
 
   const live = orders.filter(o => o.status !== 'cancelled')
   const due = live.reduce((s, o) => s + Math.max(orderTotal(o) - o.paid_paise, 0), 0)
@@ -35,6 +35,7 @@ export default async function OrdersPage({
         orders={orders}
         items={items}
         customers={customers}
+        categories={categories}
         customerLabel={business.customer_label ?? 'Customer'}
         openNewFor={newFor && customers.some(c => c.id === newFor) ? newFor : undefined}
       />
