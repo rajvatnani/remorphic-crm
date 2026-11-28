@@ -76,8 +76,57 @@ export default function ItemList({
     else router.refresh()
   }
 
+
+  const stockButton = (item: Item) => (
+    <>
+    {item.stock == null ? (
+      <span className="text-gray-400" title="Not tracked. Enter a stock count when editing the item to track it.">—</span>
+    ) : (
+      <button
+        onClick={() => setStockFor(item.id)}
+        title="Adjust stock and see its history"
+        className={`min-w-10 px-2 py-1 rounded-lg border hover:border-[#C81E5B] hover:text-[#C81E5B] ${item.stock <= 0 ? 'text-red-600 font-medium border-red-200' : isLow(item) ? 'text-amber-700 font-medium border-amber-200 bg-amber-50' : 'border-fest-line'}`}
+      >
+        {item.stock}
+      </button>
+    )}
+    </>
+  )
+
+  const itemActions = (item: Item) => (
+    <div className="flex items-center justify-end gap-1">
+      <button onClick={() => setEditing(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="Edit item">
+        <Pencil className="h-4 w-4" />
+      </button>
+      {shopPath && item.code && item.active && !item.archived && (
+        <button
+          onClick={() => copyLink(item.id, `item=${encodeURIComponent(item.code!)}`)}
+          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+          title="Copy this item's shop link, to share on WhatsApp"
+        >
+          {copiedId === item.id ? <Check className="h-4 w-4 text-green-600" /> : <Link2 className="h-4 w-4" />}
+        </button>
+      )}
+      <button onClick={() => setDuplicating(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="Duplicate, to add a variant fast">
+        <Copy className="h-4 w-4" />
+      </button>
+      {item.archived ? (
+        <button onClick={() => handleArchive(item, false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="Restore from archive">
+          <ArchiveRestore className="h-4 w-4" />
+        </button>
+      ) : (
+        <button onClick={() => handleArchive(item, true)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="Archive: hide from the shop, new orders and stock reports, keep its history">
+          <Archive className="h-4 w-4" />
+        </button>
+      )}
+      <button onClick={() => handleDelete(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50" title="Delete item">
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
+  )
+
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="p-4 sm:p-6 max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-heading text-4xl font-extrabold text-fest-ink tracking-tight">Items</h1>
@@ -125,7 +174,46 @@ export default function ItemList({
       )}
       </div>
 
-      <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
+      {/* Phones: one card per item */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 && (
+          <p className="rounded-3xl border border-fest-line bg-white py-12 text-center text-sm text-gray-400">
+            {items.length === 0 ? 'No items yet. Add what you sell.' : showArchived ? 'No archived items match.' : 'No items match.'}
+          </p>
+        )}
+        {filtered.map(item => (
+          <div key={item.id} className={`rounded-3xl border border-fest-line bg-white p-3 ${item.active ? '' : 'opacity-60'}`}>
+            <div className="flex gap-3">
+              {item.photo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={item.photo_url} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-cover" />
+              ) : (
+                <div className="h-16 w-16 shrink-0 rounded-2xl bg-fest-cream" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold leading-tight text-fest-ink">{item.name}</p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  {[item.code, item.category_id && categoryName[item.category_id], item.wholesaler].filter(Boolean).join(' · ')}
+                  {!item.active && ' · Hidden'}
+                </p>
+                <p className="mt-1 text-sm">
+                  <span className="font-bold text-fest-ink">{formatRupees(item.price_paise)}</span>
+                  {item.mrp_paise != null && item.mrp_paise > item.price_paise && (
+                    <span className="ml-1.5 text-xs text-gray-400 line-through">{formatRupees(item.mrp_paise)}</span>
+                  )}
+                  {item.cost_paise != null && <span className="ml-1.5 text-xs text-gray-500">cost {formatRupees(item.cost_paise)}</span>}
+                </p>
+              </div>
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-2 border-t border-fest-line/70 pt-2">
+              <span className="flex items-center gap-1.5 text-xs text-gray-500">In stock {stockButton(item)}</span>
+              {itemActions(item)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="hidden md:block bg-white rounded-3xl border border-fest-line overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-fest-cream hover:bg-fest-cream">
@@ -173,48 +261,10 @@ export default function ItemList({
                 </TableCell>
                 <TableCell className="text-right text-gray-500">{item.cost_paise != null ? formatRupees(item.cost_paise) : '—'}</TableCell>
                 <TableCell className="text-right">
-                  {item.stock == null ? (
-                    <span className="text-gray-400" title="Not tracked. Enter a stock count when editing the item to track it.">—</span>
-                  ) : (
-                    <button
-                      onClick={() => setStockFor(item.id)}
-                      title="Adjust stock and see its history"
-                      className={`min-w-10 px-2 py-1 rounded-lg border hover:border-[#C81E5B] hover:text-[#C81E5B] ${item.stock <= 0 ? 'text-red-600 font-medium border-red-200' : isLow(item) ? 'text-amber-700 font-medium border-amber-200 bg-amber-50' : 'border-fest-line'}`}
-                    >
-                      {item.stock}
-                    </button>
-                  )}
+                  {stockButton(item)}
                 </TableCell>
                 <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <button onClick={() => setEditing(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="Edit item">
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    {shopPath && item.code && item.active && !item.archived && (
-                      <button
-                        onClick={() => copyLink(item.id, `item=${encodeURIComponent(item.code!)}`)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100"
-                        title="Copy this item's shop link, to share on WhatsApp"
-                      >
-                        {copiedId === item.id ? <Check className="h-4 w-4 text-green-600" /> : <Link2 className="h-4 w-4" />}
-                      </button>
-                    )}
-                    <button onClick={() => setDuplicating(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="Duplicate, to add a variant fast">
-                      <Copy className="h-4 w-4" />
-                    </button>
-                    {item.archived ? (
-                      <button onClick={() => handleArchive(item, false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="Restore from archive">
-                        <ArchiveRestore className="h-4 w-4" />
-                      </button>
-                    ) : (
-                      <button onClick={() => handleArchive(item, true)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="Archive: hide from the shop, new orders and stock reports, keep its history">
-                        <Archive className="h-4 w-4" />
-                      </button>
-                    )}
-                    <button onClick={() => handleDelete(item)} className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50" title="Delete item">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
+                  {itemActions(item)}
                 </TableCell>
               </TableRow>
             ))}

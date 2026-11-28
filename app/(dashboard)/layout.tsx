@@ -55,7 +55,7 @@ export default async function DashboardLayout({
       <MobileNav business={business} />
 
       {/* Main content */}
-      <main className={`md:ml-64 pb-16 md:pb-0 ${isAdminViewing ? 'pt-22 md:pt-8' : 'pt-14 md:pt-0'}`}>
+      <main className={`md:ml-64 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0 ${isAdminViewing ? 'pt-22 md:pt-8' : 'pt-14 md:pt-0'}`}>
         {children}
       </main>
     </div>
