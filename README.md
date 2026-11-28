@@ -88,6 +88,7 @@ SQL files in [`supabase/`](supabase) are run by hand in the Supabase SQL Editor.
 22. `shop_extras_migration.sql`
 23. `order_steps_migration.sql`
 24. `ai_instructions_migration.sql`
+25. `business_lookup_fix_migration.sql`
 
 When code needs a database change, add a new file and note here where it goes in the order. Run it in Supabase **before** merging the code that depends on it.
 
@@ -110,6 +111,7 @@ Rules to keep:
 - **Shop page extras:** `shop_description`, `upi_id` (a Pay by UPI button and QR with the amount, on the customer's order page and invoice), `delivery_flat_paise` and `free_delivery_above_paise` (worked out in `place_shop_order2`; no delivery when the customer collects), and `show_sold_out`. Shop orders keep `city` and `pincode`. Links to one category or item are `/shop/<slug>?category=<id>` and `/shop/<slug>?item=<code>`. `place_shop_order` is no longer called and can be dropped.
 - **Order steps:** new → confirmed → packed (stored as `ready`) → shipped → delivered, or cancelled. Packed orders can go straight to delivered when handed over. `change_order_status` saves the courier, tracking number and `delivery_cost_paise` (taken off profit) when shipping, and `cancel_reason` when cancelling. A trigger writes every change to `order_status_history`, which members can read but not write. `record_order_payment` handles cash on delivery (`cod`), `refunded` and the UPI reference. Shop orders show as New until opened (`seen_at`, set by `mark_orders_seen`).
 - **AI fill:** `app/actions/ai.ts` sends an item's cover photo, the business type, its categories, the tag list and `businesses.ai_instructions` to Claude Opus 5.5 with a fixed output schema and server-side refusal fallback, then fills the item form for the owner to check. Only signed-in members can call it, and only with their own business's photos.
+- **Functions name their schema:** functions that run with an empty `search_path` (all the newer ones) call `public.get_my_business_id()`, which itself names `public.business_users` and fixes its `search_path`. Any new function used inside row-level-security rules should do the same, or it fails when called from those functions.
 - **Customers without a phone:** online bookings may leave the phone blank, stored as `''`. `sendWhatsApp` skips those, so code that messages customers must keep going through it.
 
 ### Not yet in this repository
