@@ -17,6 +17,10 @@ export interface Business {
   inactive_threshold_days: number
   slug: string
   customer_label: string
+  leads_enabled?: boolean
+  appointments_enabled?: boolean
+  visits_enabled?: boolean
+  orders_enabled?: boolean
 }
 
 export interface Customer {
@@ -113,3 +117,57 @@ export const INTERACTION_TYPES: { value: InteractionType; label: string }[] = [
 ]
 
 export const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+export interface Item {
+  id: string
+  business_id: string
+  name: string
+  code: string | null
+  description: string | null
+  price_paise: number
+  cost_paise: number | null
+  stock: number | null
+  active: boolean
+  created_at: string
+}
+
+export type OrderStatus = 'new' | 'confirmed' | 'ready' | 'delivered' | 'cancelled'
+export type PaymentStatus = 'pending' | 'partial' | 'paid'
+
+export const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
+  { value: 'new', label: 'New' },
+  { value: 'confirmed', label: 'Confirmed' },
+  { value: 'ready', label: 'Ready' },
+  { value: 'delivered', label: 'Delivered' },
+  { value: 'cancelled', label: 'Cancelled' },
+]
+
+export interface OrderLine {
+  id: string
+  item_id: string | null
+  name: string
+  price_paise: number
+  cost_paise: number | null
+  qty: number
+}
+
+export interface Order {
+  id: string
+  order_no: number
+  customer_id: string
+  status: OrderStatus
+  payment_status: PaymentStatus
+  paid_paise: number
+  delivery_paise: number
+  discount_paise: number
+  notes: string | null
+  due_date: string | null
+  created_at: string
+  customers: { id: string; name: string; phone: string } | null
+  order_items: OrderLine[]
+}
+
+export function orderTotal(o: Pick<Order, 'delivery_paise' | 'discount_paise' | 'order_items'>): number {
+  const lines = o.order_items.reduce((sum, l) => sum + l.price_paise * l.qty, 0)
+  return Math.max(lines + o.delivery_paise - o.discount_paise, 0)
+}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import FeaturesCard from './features-card'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { saveAppointmentConfig } from '@/app/actions/appointments'
@@ -314,6 +315,8 @@ export default function SettingsPage() {
         <h1 className="font-heading text-3xl font-bold tracking-tight text-gray-900">Settings</h1>
         <p className="text-sm text-gray-500 mt-1">Manage your business profile and appointment configuration</p>
       </div>
+
+      <FeaturesCard />
 
       {/* Business Profile */}
       <Card className="shadow-none border border-gray-200">

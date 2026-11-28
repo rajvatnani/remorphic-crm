@@ -5,30 +5,14 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import type { Business } from '@/types'
 import { cn } from '@/lib/utils'
-import {
-  LayoutDashboard,
-  Users,
-  UserPlus,
-  ClipboardList,
-  Megaphone,
-  CalendarDays,
-  Settings,
-  LogOut,
-} from 'lucide-react'
+import { navItems as buildNavItems } from '@/lib/modules'
+import { Settings, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function Sidebar({ business }: { business: Business }) {
   const pathname = usePathname()
-  const customerLabel = (business.customer_label ?? 'Customer') + 's'
 
-  const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/leads', label: 'Leads', icon: UserPlus },
-    { href: '/customers', label: customerLabel, icon: Users },
-    { href: '/appointments', label: 'Appointments', icon: CalendarDays },
-    { href: '/visits', label: 'Visit Log', icon: ClipboardList },
-    { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
-  ]
+  const navItems = buildNavItems(business)
   const router = useRouter()
 
   async function handleLogout() {

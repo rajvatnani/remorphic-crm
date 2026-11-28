@@ -4,24 +4,17 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import type { Business } from '@/types'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Users, UserPlus, CalendarDays, ClipboardList, Megaphone, Settings, LogOut } from 'lucide-react'
+import { navItems as buildNavItems } from '@/lib/modules'
+import { Settings, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useState } from 'react'
 
 export default function MobileNav({ business }: { business: Business }) {
   const pathname = usePathname()
   const router = useRouter()
-  const customerLabel = (business.customer_label ?? 'Customer') + 's'
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/leads', label: 'Leads', icon: UserPlus },
-    { href: '/customers', label: customerLabel, icon: Users },
-    { href: '/appointments', label: 'Appts', icon: CalendarDays },
-    { href: '/visits', label: 'Visits', icon: ClipboardList },
-    { href: '/campaigns', label: 'Campaigns', icon: Megaphone },
-  ]
+  const navItems = buildNavItems(business, true)
 
   async function handleSignOut() {
     const supabase = createClient()
