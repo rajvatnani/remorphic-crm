@@ -7,6 +7,7 @@ import { normalizePhone, isValidPhone } from '@/lib/phone'
 import { sendWhatsApp } from '@/lib/whatsapp'
 import { formatRupees } from '@/lib/money'
 import { imageType } from '@/lib/image-check'
+import { sendEmail, escapeHtml, EMAIL_RE } from '@/lib/email'
 import { randomUUID } from 'node:crypto'
 
 // Public pages: everything from the browser is untrusted, and the anon key
@@ -156,25 +157,29 @@ export async function placeShopOrder(input: {
       return { ok: false, error: 'Your cart is empty.' }
   }
 
-  // Tell the owner. The order stands whether or not this is sent.
-  const { data: business } = await admin
-    .from('businesses').select('phone').eq('id', input.businessId).single()
-  if (business?.phone) {
-    const { data: order } = await admin
-      .from('orders')
-      .select('order_no, order_items(name, qty, price_paise)')
-      .eq('id', data.order_id)
-      .single()
-    if (order) {
-      const total = (order.order_items as { qty: number; price_paise: number }[])
-        .reduce((s, l) => s + l.qty * l.price_paise, 0)
-      const list = (order.order_items as { name: string; qty: number }[])
-        .map(l => `• ${l.qty} × ${l.name}`).join('\n')
-      await sendWhatsApp(
+  // Tell the owner on WhatsApp and by email. The order stands whether or not these are sent.
+  const [{ data: business }, { data: order }] = await Promise.all([
+    admin.from('businesses').select('name, phone, order_alert_email').eq('id', input.businessId).single(),
+    admin.from('orders').select('order_no, order_items(name, qty, price_paise)').eq('id', data.order_id).single(),
+  ])
+  if (business && order) {
+    const lines = order.order_items as { name: string; qty: number; price_paise: number }[]
+    const total = lines.reduce((s, l) => s + l.qty * l.price_paise, 0)
+
+    const alerts: Promise<unknown>[] = []
+    if (business.phone) {
+      const list = lines.map(l => `• ${l.qty} × ${l.name}`).join('\n')
+      alerts.push(sendWhatsApp(
         business.phone,
         `🛍️ New shop order #${order.order_no}\n\n*${name}* (${phone})\n${list}\nTotal ${formatRupees(total)}\n\nOpen Custozo → Orders to confirm.`
-      )
+      ))
     }
+    if (business.order_alert_email && EMAIL_RE.test(business.order_alert_email)) {
+      alerts.push(sendEmail(business.order_alert_email, ...orderEmail({
+        businessName: business.name, orderNo: order.order_no, name, phone, address, note, lines, total,
+      })))
+    }
+    await Promise.all(alerts)
   }
 
   return { ok: true, token: data.token }
@@ -342,4 +347,36 @@ export async function getInvoice(token: string): Promise<InvoiceView | null> {
     lines: order_items as InvoiceView['lines'],
     business,
   }
+}
+
+function orderEmail(o: {
+  businessName: string
+  orderNo: number
+  name: string
+  phone: string
+  address: string
+  note: string
+  lines: { name: string; qty: number; price_paise: number }[]
+  total: number
+}): [string, string, string] {
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/$/, '')
+  const subject = `New order #${o.orderNo} for ${formatRupees(o.total)} from ${o.name}`
+  const rows = o.lines.map(l =>
+    `<tr><td style="padding:4px 12px 4px 0">${l.qty} × ${escapeHtml(l.name)}</td><td style="padding:4px 0;text-align:right">${formatRupees(l.qty * l.price_paise)}</td></tr>`
+  ).join('')
+  const html = `<div style="font-family:Arial,sans-serif;font-size:14px;color:#111">
+<p style="font-size:18px;font-weight:bold;margin:0 0 12px">New order #${o.orderNo} at ${escapeHtml(o.businessName)}</p>
+<p style="margin:0 0 12px"><b>${escapeHtml(o.name)}</b> · ${escapeHtml(o.phone)}${o.address ? `<br>${escapeHtml(o.address)}` : ''}${o.note ? `<br><i>${escapeHtml(o.note)}</i>` : ''}</p>
+<table style="border-collapse:collapse;margin:0 0 12px">${rows}<tr><td style="padding:8px 12px 0 0;font-weight:bold;border-top:1px solid #ddd">Total</td><td style="padding:8px 0 0;text-align:right;font-weight:bold;border-top:1px solid #ddd">${formatRupees(o.total)}</td></tr></table>
+${appUrl ? `<p><a href="${appUrl}/orders" style="color:#F15A24;font-weight:bold">Open Orders to confirm</a></p>` : '<p>Open Custozo → Orders to confirm.</p>'}
+</div>`
+  const text = [
+    `New order #${o.orderNo} at ${o.businessName}`,
+    `${o.name} · ${o.phone}`,
+    o.address, o.note,
+    ...o.lines.map(l => `${l.qty} x ${l.name}: ${formatRupees(l.qty * l.price_paise)}`),
+    `Total ${formatRupees(o.total)}`,
+    appUrl ? `${appUrl}/orders` : 'Open Custozo > Orders to confirm.',
+  ].filter(Boolean).join('\n')
+  return [subject, html, text]
 }

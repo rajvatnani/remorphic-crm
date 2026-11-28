@@ -24,6 +24,7 @@ export interface Business {
   shop_enabled?: boolean
   gstin?: string | null
   invoice_note?: string | null
+  order_alert_email?: string | null
 }
 
 export interface Customer {

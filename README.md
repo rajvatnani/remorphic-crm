@@ -54,7 +54,8 @@ See [`.env.example`](.env.example) for the full list. In production they are set
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser and server access to Supabase, limited by row-level security |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only work: public booking, staff invites, admin pages, file storage |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` | Sending WhatsApp messages |
-| `NEXT_PUBLIC_APP_URL` | The address in staff invite emails |
+| `NEXT_PUBLIC_APP_URL` | The address in staff invite emails and order emails |
+| `RESEND_API_KEY`, `RESEND_FROM` | Optional. Email alerts for new shop orders, sent through Resend. Without them, emails are skipped |
 
 Keep a copy of the real values in a password manager as well.
 
@@ -81,6 +82,7 @@ SQL files in [`supabase/`](supabase) are run by hand in the Supabase SQL Editor.
 17. `categories_invoice_migration.sql`
 18. `order_payment_proof_migration.sql`
 19. `stock_log_migration.sql`
+20. `order_email_migration.sql`
 
 When code needs a database change, add a new file and note here where it goes in the order. Run it in Supabase **before** merging the code that depends on it.
 
@@ -98,6 +100,7 @@ Rules to keep:
 - **Order payment screenshots:** customers upload them on their order page; the server checks the file is an image under 3 MB and stores it in the private `payment-screenshots` bucket under `<business id>/orders/`, replacing any earlier one. Staff open it through a one-hour signed link. Uploading never marks an order paid.
 - **Stock log:** a trigger on `items` writes a `stock_moves` row for every change to `stock`, so nothing goes unlogged. Functions that change stock say why through the `app.stock_reason`, `app.stock_order` and `app.stock_note` settings (local to the transaction); anything else is logged as `edit`. Members can read the log but not write it. Manual changes go through `adjust_stock`.
 - **Reports** (`/reports`, with Orders on): worked out in `lib/reports.ts` from orders already loaded. Only confirmed, ready and delivered orders count; dates are India time; profit uses lines with a known cost. Running low means 2 or fewer in stock.
+- **Order emails:** each new shop order is emailed to `businesses.order_alert_email` if it is set and Resend is configured. A failed email never stops the order.
 - **Customers without a phone:** online bookings may leave the phone blank, stored as `''`. `sendWhatsApp` skips those, so code that messages customers must keep going through it.
 
 ### Not yet in this repository
