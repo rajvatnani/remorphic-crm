@@ -171,7 +171,64 @@ export default function OrderList({
         </div>
       )}
 
-      <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
+      {/* Phones: one card per order; the detail opens full width under it */}
+      <div className="md:hidden space-y-3">
+        {shown.length === 0 && (
+          <p className="rounded-3xl border border-fest-line bg-white py-12 text-center text-sm text-gray-400">
+            {orders.length === 0 ? 'No orders yet.' : 'No orders here.'}
+          </p>
+        )}
+        {shown.map(o => {
+          const isOpen = expanded.has(o.id)
+          const first = o.order_items[0]?.name ?? ''
+          const more = o.order_items.length - 1
+          return (
+            <div key={o.id} className={`overflow-hidden rounded-3xl border bg-white ${isOpen ? 'border-fest-rani/40' : 'border-fest-line'}`}>
+              <button type="button" onClick={() => toggle(o.id)} className="w-full p-4 text-left" aria-expanded={isOpen}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-friendly text-lg font-bold text-fest-ink">#{o.order_no}</span>
+                      {isUnseen(o) && !seenNow.has(o.id) && <Badge className="bg-[#C81E5B] text-white border-0 text-[10px]">New</Badge>}
+                      {o.source === 'shop' && <Badge className="bg-fest-ranisoft text-[#C81E5B] border-0 text-[10px]">Shop</Badge>}
+                      <span className="text-xs text-gray-400">{fmtDate(o.created_at)}</span>
+                    </div>
+                    {!fixedCustomerId && o.customers && (
+                      <p className="mt-0.5 truncate text-sm font-semibold text-fest-ink">
+                        {o.customers.name}
+                        {o.customers.phone && <span className="font-normal text-gray-400"> · {o.customers.phone}</span>}
+                      </p>
+                    )}
+                    <p className="truncate text-sm text-gray-600">{first}{more > 0 ? ` +${more} more` : ''}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="font-friendly text-lg font-bold text-fest-ink">{formatRupees(orderTotal(o))}</p>
+                    <ChevronDown className={`ml-auto h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <Badge className={`${STATUS_STYLE[o.status]} border-0`}>{STATUS_LABEL[o.status]}</Badge>
+                  {o.status !== 'cancelled' && <Badge className={`${PAYMENT_STYLE[o.payment_status]} border-0`}>{PAYMENT_LABEL[o.payment_status]}</Badge>}
+                  {o.status !== 'cancelled' && o.payment_status !== 'paid' && o.payment_screenshot && (
+                    <span className="text-[11px] text-emerald-700">Screenshot sent</span>
+                  )}
+                </div>
+              </button>
+              {isOpen && (
+                <div className="border-t border-fest-line bg-fest-cream/60 p-3">
+                  <OrderDetail
+                    key={`${o.id}-${o.paid_paise}`}
+                    order={o}
+                    onEdit={() => setDialog({ order: o, n: Date.now() })}
+                  />
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="hidden md:block bg-white rounded-3xl border border-fest-line overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-fest-cream hover:bg-fest-cream">
