@@ -97,6 +97,7 @@ Rules to keep:
 - **Categories:** `item_categories` belong to one business; a trigger stops an item using another business's category. Deleting a category keeps its items.
 - **Order payment screenshots:** customers upload them on their order page; the server checks the file is an image under 3 MB and stores it in the private `payment-screenshots` bucket under `<business id>/orders/`, replacing any earlier one. Staff open it through a one-hour signed link. Uploading never marks an order paid.
 - **Stock log:** a trigger on `items` writes a `stock_moves` row for every change to `stock`, so nothing goes unlogged. Functions that change stock say why through the `app.stock_reason`, `app.stock_order` and `app.stock_note` settings (local to the transaction); anything else is logged as `edit`. Members can read the log but not write it. Manual changes go through `adjust_stock`.
+- **Reports** (`/reports`, with Orders on): worked out in `lib/reports.ts` from orders already loaded. Only confirmed, ready and delivered orders count; dates are India time; profit uses lines with a known cost. Running low means 2 or fewer in stock.
 - **Customers without a phone:** online bookings may leave the phone blank, stored as `''`. `sendWhatsApp` skips those, so code that messages customers must keep going through it.
 
 ### Not yet in this repository
