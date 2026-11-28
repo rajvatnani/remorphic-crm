@@ -178,6 +178,8 @@ export interface Order {
   address?: string | null
   public_token?: string
   delivered_at?: string | null
+  payment_screenshot?: string | null
+  payment_screenshot_at?: string | null
   customers: { id: string; name: string; phone: string } | null
   order_items: OrderLine[]
 }

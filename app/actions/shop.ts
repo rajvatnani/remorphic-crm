@@ -6,6 +6,8 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { normalizePhone, isValidPhone } from '@/lib/phone'
 import { sendWhatsApp } from '@/lib/whatsapp'
 import { formatRupees } from '@/lib/money'
+import { imageType } from '@/lib/image-check'
+import { randomUUID } from 'node:crypto'
 
 // Public pages: everything from the browser is untrusted, and the anon key
 // cannot read items or orders, so these run with the service role and
@@ -191,6 +193,7 @@ export interface ShopOrderView {
   customer_name: string
   lines: { name: string; qty: number; price_paise: number }[]
   business: ShopBusiness
+  has_screenshot: boolean
 }
 
 /** The customer's own order page, found by its unguessable token */
@@ -199,7 +202,7 @@ export async function getShopOrder(slug: string, token: string): Promise<ShopOrd
   const admin = adminClient()
   const { data: order } = await admin
     .from('orders')
-    .select('order_no, status, payment_status, paid_paise, delivery_paise, discount_paise, address, notes, created_at, business_id, customers(name), order_items(name, qty, price_paise)')
+    .select('order_no, status, payment_status, paid_paise, delivery_paise, discount_paise, address, notes, created_at, business_id, payment_screenshot, customers(name), order_items(name, qty, price_paise)')
     .eq('public_token', token)
     .maybeSingle()
   if (!order) return null
@@ -225,7 +228,74 @@ export async function getShopOrder(slug: string, token: string): Promise<ShopOrd
     customer_name: customer?.name ?? '',
     lines: order.order_items as ShopOrderView['lines'],
     business: business as ShopBusiness,
+    has_screenshot: Boolean(order.payment_screenshot),
   }
+}
+
+// Keep below the server action body limit in next.config.ts
+const MAX_SCREENSHOT_BYTES = 3 * 1024 * 1024
+
+/**
+ * The customer's payment screenshot for their order, sent from the order
+ * page. Replaces an earlier one. The business checks it and records the
+ * payment itself; nothing is marked paid here.
+ */
+export async function uploadOrderPaymentScreenshot(token: string, upload: FormData): Promise<{ ok: boolean; error?: string }> {
+  if (!TOKEN_RE.test(String(token))) return { ok: false, error: 'Order not found.' }
+  const file = upload?.get('file')
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: 'Please choose a screenshot.' }
+  if (file.size > MAX_SCREENSHOT_BYTES) return { ok: false, error: 'The screenshot must be smaller than 3 MB.' }
+
+  const bytes = Buffer.from(await file.arrayBuffer())
+  const type = imageType(bytes)
+  if (!type) return { ok: false, error: 'The screenshot must be a JPG, PNG or WebP image.' }
+
+  const admin = adminClient()
+  const { data: order } = await admin
+    .from('orders')
+    .select('id, order_no, status, payment_status, payment_screenshot, payment_screenshot_at, business_id, customers(name)')
+    .eq('public_token', token)
+    .maybeSingle()
+  if (!order) return { ok: false, error: 'Order not found.' }
+  if (order.status === 'cancelled') return { ok: false, error: 'This order was cancelled.' }
+  if (order.payment_status === 'paid') return { ok: false, error: 'This order is already marked as paid.' }
+  // A slow drip of replacements is fine; a flood is not
+  if (order.payment_screenshot_at && Date.now() - new Date(order.payment_screenshot_at).getTime() < 30_000) {
+    return { ok: false, error: 'Please wait a moment before sending another screenshot.' }
+  }
+
+  const path = `${String(order.business_id).toLowerCase()}/orders/${randomUUID()}.${type.ext}`
+  const { error: upErr } = await admin.storage
+    .from('payment-screenshots')
+    .upload(path, bytes, { contentType: type.mime })
+  if (upErr) {
+    console.error('[Shop] screenshot upload failed')
+    return { ok: false, error: 'Could not save the screenshot. Please try again.' }
+  }
+
+  const { error } = await admin
+    .from('orders')
+    .update({ payment_screenshot: path, payment_screenshot_at: new Date().toISOString() })
+    .eq('id', order.id)
+  if (error) {
+    await admin.storage.from('payment-screenshots').remove([path])
+    return { ok: false, error: 'Could not save the screenshot. Please try again.' }
+  }
+  if (order.payment_screenshot) {
+    await admin.storage.from('payment-screenshots').remove([order.payment_screenshot])
+  }
+
+  // Tell the owner. The screenshot stands whether or not this is sent.
+  const { data: business } = await admin.from('businesses').select('phone').eq('id', order.business_id).single()
+  if (business?.phone) {
+    const customer = order.customers as unknown as { name: string } | null
+    await sendWhatsApp(
+      business.phone,
+      `💳 Payment screenshot for order #${order.order_no}${customer?.name ? ` from *${customer.name.replace(/\s+/g, ' ')}*` : ''}.\n\nOpen Custozo → Orders to check it and record the payment.`
+    )
+  }
+
+  return { ok: true }
 }
 
 export interface InvoiceView {

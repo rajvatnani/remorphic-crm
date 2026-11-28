@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone, isValidPhone } from '@/lib/phone'
 import { toPaise } from '@/lib/money'
 import type { OrderStatus } from '@/types'
@@ -257,4 +258,19 @@ export async function setOrderPayment(orderId: string, paid: string): Promise<Re
   if (error) return { ok: false, error: error.message }
   refresh()
   return { ok: true }
+}
+
+// Looks the file up from an order the caller can see (RLS), so a signed
+// link cannot be requested for an arbitrary path.
+export async function getOrderScreenshotUrl(orderId: string): Promise<string | null> {
+  const supabase = await createClient()
+  const { data: order } = await supabase
+    .from('orders')
+    .select('payment_screenshot')
+    .eq('id', orderId)
+    .maybeSingle()
+  const path = order?.payment_screenshot as string | null | undefined
+  if (!path) return null
+  const { data } = await createAdminClient().storage.from('payment-screenshots').createSignedUrl(path, 3600)
+  return data?.signedUrl ?? null
 }
