@@ -23,7 +23,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import type { AppointmentConfig, AppointmentWithCustomer, Business } from '@/types'
-import { DAY_NAMES } from '@/types'
 import { ChevronLeft, ChevronRight, Plus, Check, X, Search, Clock, Pencil } from 'lucide-react'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -74,6 +73,22 @@ function addDays(dateStr: string, n: number) {
 
 function getDayOfWeek(dateStr: string) {
   return new Date(dateStr + 'T00:00:00').getDay()
+}
+
+const FULL_DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+
+// The nearest open day in the given direction, starting from the day after dateStr.
+// Returns null when no day of the week is open.
+function nearestOpenDay(dateStr: string, dir: 1 | -1, openDays: number[]) {
+  for (let i = 1; i <= 7; i++) {
+    const d = addDays(dateStr, dir * i)
+    if (openDays.includes(getDayOfWeek(d))) return d
+  }
+  return null
+}
+
+function shortDate(dateStr: string) {
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
 // ─── status badge ────────────────────────────────────────────────────────────
@@ -373,7 +388,7 @@ function ChangeBookingDialog({
           </div>
           {closed && (
             <p className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
-              {DAY_NAMES[getDayOfWeek(date)]}s are marked as closed. Pick another date.
+              You&apos;re closed on {FULL_DAY_NAMES[getDayOfWeek(date)]}s. Pick another date.
             </p>
           )}
           <div className="space-y-1.5">
@@ -419,6 +434,8 @@ export default function AppointmentsPage() {
   const [changing, setChanging] = useState<AppointmentWithCustomer | null>(null)
   const [flash, setFlash] = useState<string | null>(null)
   const [actionPending, startTransition] = useTransition()
+  const [skippedToday, setSkippedToday] = useState(false)
+  const firstLoad = useRef(true)
 
   const supabase = createClient()
 
@@ -434,6 +451,18 @@ export default function AppointmentsPage() {
     ])
 
     setConfig(cfg ?? null)
+    // Opening the page on a closed day shows nothing useful: start on the next open day instead.
+    if (firstLoad.current) {
+      firstLoad.current = false
+      const today = todayStr()
+      if (cfg && cfg.open_days.length > 0 && !cfg.open_days.includes(getDayOfWeek(today))) {
+        const next = nearestOpenDay(today, 1, cfg.open_days)
+        if (next) {
+          setDate(d => (d === today ? next : d))
+          setSkippedToday(true)
+        }
+      }
+    }
     setCustomers(custs ?? [])
     setPendingCount(pc ?? 0)
     setConfigLoaded(true)
@@ -460,6 +489,19 @@ export default function AppointmentsPage() {
   const slots = config ? generateSlots(config) : []
   const dayOfWeek = getDayOfWeek(date)
   const isClosed = config ? !config.open_days.includes(dayOfWeek) : false
+  const openDays = config?.open_days ?? []
+  const hasOpenDays = openDays.length > 0
+
+  // Arrows jump over closed days so the owner never lands on an empty page.
+  function step(dir: 1 | -1) {
+    setSkippedToday(false)
+    setDate(d => (hasOpenDays ? nearestOpenDay(d, dir, openDays) : null) ?? addDays(d, dir))
+  }
+
+  function pickDate(d: string) {
+    setSkippedToday(false)
+    setDate(d)
+  }
 
   const bySlot: Record<string, AppointmentWithCustomer[]> = {}
   for (const a of appointments) {
@@ -537,7 +579,8 @@ export default function AppointmentsPage() {
       {/* Date navigator */}
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={() => setDate(d => addDays(d, -1))}
+          onClick={() => step(-1)}
+          aria-label={hasOpenDays ? 'Previous open day' : 'Previous day'}
           className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
         >
           <ChevronLeft className="h-4 w-4 text-gray-600" />
@@ -545,24 +588,31 @@ export default function AppointmentsPage() {
         <input
           type="date"
           value={date}
-          onChange={e => setDate(e.target.value)}
+          onChange={e => e.target.value && pickDate(e.target.value)}
           className="h-9 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 outline-none focus:border-orange-400"
         />
         <button
-          onClick={() => setDate(d => addDays(d, 1))}
+          onClick={() => step(1)}
+          aria-label={hasOpenDays ? 'Next open day' : 'Next day'}
           className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
         >
           <ChevronRight className="h-4 w-4 text-gray-600" />
         </button>
         {!isToday && (
           <button
-            onClick={() => setDate(todayStr())}
+            onClick={() => pickDate(todayStr())}
             className="px-3 h-9 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-100"
           >
             Today
           </button>
         )}
       </div>
+
+      {skippedToday && (
+        <p className="-mt-3 mb-4 text-sm text-gray-500">
+          You&apos;re closed today, so this shows your next open day.
+        </p>
+      )}
 
       {/* Loading base config */}
       {!configLoaded && (
@@ -583,8 +633,20 @@ export default function AppointmentsPage() {
       {/* Closed day */}
       {configLoaded && config && isClosed && (
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
-          <p className="font-medium text-gray-700">{DAY_NAMES[dayOfWeek]}s are marked as closed</p>
-          <p className="text-sm text-gray-500 mt-1">No appointment slots available. You can still navigate to other days.</p>
+          <p className="font-medium text-gray-700">You&apos;re closed on {FULL_DAY_NAMES[dayOfWeek]}s</p>
+          <p className="text-sm text-gray-500 mt-1">No appointment slots on this day.</p>
+          {(() => {
+            const next = hasOpenDays ? nearestOpenDay(date, 1, openDays) : null
+            return next ? (
+              <button
+                onClick={() => pickDate(next)}
+                className="mt-4 inline-flex items-center gap-1 px-4 h-9 rounded-lg text-sm font-medium text-white"
+                style={{ backgroundColor: '#F15A24' }}
+              >
+                Go to {shortDate(next)} <ChevronRight className="h-4 w-4" />
+              </button>
+            ) : null
+          })()}
         </div>
       )}
 
