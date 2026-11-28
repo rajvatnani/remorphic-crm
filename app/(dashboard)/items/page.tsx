@@ -16,5 +16,5 @@ export default async function ItemsPage() {
     .eq('business_id', business.id)
     .order('name')
 
-  return <ItemList items={(items ?? []) as Item[]} />
+  return <ItemList items={(items ?? []) as Item[]} businessId={business.id} />
 }

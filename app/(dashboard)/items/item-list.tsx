@@ -4,6 +4,8 @@ import { useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveItem, deleteItem, type ItemInput } from '@/app/actions/orders'
 import { formatRupees, toRupeesInput } from '@/lib/money'
+import { compressImage } from '@/lib/image'
+import { createClient } from '@/lib/supabase/client'
 import type { Item } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,12 +14,34 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, Search } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ImagePlus, Package } from 'lucide-react'
 
-function ItemDialog({ item, open, onClose }: { item: Item | null; open: boolean; onClose: () => void }) {
+function ItemDialog({ item, open, onClose, businessId }: { item: Item | null; open: boolean; onClose: () => void; businessId: string }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
+  const [photo, setPhoto] = useState<string | null>(item?.photo_url ?? null)
+  const [uploading, setUploading] = useState(false)
+
+  async function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    setError(null)
+    try {
+      const blob = await compressImage(file)
+      const supabase = createClient()
+      const path = `${businessId}/items/${crypto.randomUUID()}.jpg`
+      const { error: upErr } = await supabase.storage.from('business-photos').upload(path, blob, { contentType: 'image/jpeg' })
+      if (upErr) throw new Error(upErr.message)
+      setPhoto(supabase.storage.from('business-photos').getPublicUrl(path).data.publicUrl)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not upload the photo.')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -30,6 +54,7 @@ function ItemDialog({ item, open, onClose }: { item: Item | null; open: boolean;
       cost: String(f.get('cost') ?? ''),
       stock: String(f.get('stock') ?? ''),
       active: f.get('active') === 'on',
+      photo_url: photo,
     }
     setError(null)
     startTransition(async () => {
@@ -47,7 +72,25 @@ function ItemDialog({ item, open, onClose }: { item: Item | null; open: boolean;
           <DialogTitle>{item ? 'Edit item' : 'Add item'}</DialogTitle>
         </DialogHeader>
         {/* key resets the form when a different item is opened */}
-        <form key={item?.id ?? 'new'} onSubmit={handleSubmit} className="space-y-4 mt-2">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="flex items-center gap-3">
+            {photo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photo} alt="" className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
+            ) : (
+              <div className="w-16 h-16 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center">
+                <Package className="w-6 h-6 text-gray-300" />
+              </div>
+            )}
+            <label className="inline-flex items-center gap-1.5 text-sm font-medium text-[#F15A24] cursor-pointer hover:underline">
+              <ImagePlus className="w-4 h-4" />
+              {uploading ? 'Uploading…' : photo ? 'Change photo' : 'Add photo'}
+              <input type="file" accept="image/*" onChange={handlePhoto} className="hidden" disabled={uploading} />
+            </label>
+            {photo && !uploading && (
+              <button type="button" onClick={() => setPhoto(null)} className="text-xs text-gray-400 hover:text-red-600">Remove</button>
+            )}
+          </div>
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2 space-y-1.5">
               <Label htmlFor="item_name">Name</Label>
@@ -78,12 +121,12 @@ function ItemDialog({ item, open, onClose }: { item: Item | null; open: boolean;
           </div>
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input type="checkbox" name="active" defaultChecked={item?.active ?? true} />
-            Available to add to new orders
+            On sale (shown in your shop and available for new orders)
           </label>
           {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
           <div className="flex gap-3 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-            <Button type="submit" className="flex-1 bg-[#F15A24] hover:bg-[#d44d1b] text-white" disabled={pending}>
+            <Button type="submit" className="flex-1 bg-[#F15A24] hover:bg-[#d44d1b] text-white" disabled={pending || uploading}>
               {pending ? 'Saving…' : 'Save item'}
             </Button>
           </div>
@@ -93,7 +136,7 @@ function ItemDialog({ item, open, onClose }: { item: Item | null; open: boolean;
   )
 }
 
-export default function ItemList({ items }: { items: Item[] }) {
+export default function ItemList({ items, businessId }: { items: Item[]; businessId: string }) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<Item | null>(null)
@@ -158,8 +201,16 @@ export default function ItemList({ items }: { items: Item[] }) {
             {filtered.map(item => (
               <TableRow key={item.id} className={item.active ? '' : 'opacity-50'}>
                 <TableCell>
+                  <div className="flex items-center gap-3">
+                  {item.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.photo_url} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-lg bg-gray-50 shrink-0" />
+                  )}
                   <span className="font-medium text-gray-900">{item.name}</span>
-                  {!item.active && <Badge className="ml-2 bg-gray-100 text-gray-500 border-0 text-xs">Hidden</Badge>}
+                  {!item.active && <Badge className="bg-gray-100 text-gray-500 border-0 text-xs">Hidden</Badge>}
+                  </div>
                 </TableCell>
                 <TableCell className="text-gray-500">{item.code || '—'}</TableCell>
                 <TableCell className="text-right">{formatRupees(item.price_paise)}</TableCell>
@@ -183,7 +234,15 @@ export default function ItemList({ items }: { items: Item[] }) {
         </Table>
       </div>
 
-      <ItemDialog item={editing} open={adding || editing !== null} onClose={() => { setAdding(false); setEditing(null) }} />
+      {(adding || editing) && (
+        <ItemDialog
+          key={editing?.id ?? 'new'}
+          item={editing}
+          open
+          businessId={businessId}
+          onClose={() => { setAdding(false); setEditing(null) }}
+        />
+      )}
     </div>
   )
 }
