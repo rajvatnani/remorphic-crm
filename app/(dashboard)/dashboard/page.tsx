@@ -73,7 +73,7 @@ export default async function DashboardPage() {
   const low = reorderList(items, business.default_low_stock ?? 2)
 
   const orderStats: Stat[] = [
-    { title: 'New orders', value: newOrders, icon: ShoppingBag, color: 'text-[#F15A24]', bg: 'bg-[#F15A24]/10', note: unseen ? `${unseen} not opened yet` : 'Waiting to be confirmed', href: '/orders' },
+    { title: 'New orders', value: newOrders, icon: ShoppingBag, color: 'text-[#C81E5B]', bg: 'bg-[#C81E5B]/10', note: unseen ? `${unseen} not opened yet` : 'Waiting to be confirmed', href: '/orders' },
     { title: 'Sales this month', value: formatRupees(month.sales), icon: IndianRupee, color: 'text-blue-600', bg: 'bg-blue-50', note: `${month.orders} order${month.orders === 1 ? '' : 's'}`, href: '/reports?range=month' },
     { title: 'Profit this month', value: formatRupees(month.profit), icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', note: month.linesWithoutCost ? 'Some items have no cost price' : undefined, href: '/reports?range=month' },
     { title: 'Yet to be paid', value: formatRupees(toCollect), icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', note: `${pending.length} order${pending.length === 1 ? '' : 's'}`, href: '/reports' },
@@ -94,7 +94,7 @@ export default async function DashboardPage() {
     { title: `Total ${label}s`, value: customers?.length ?? 0, icon: Users, color: 'text-gray-600', bg: 'bg-gray-100', href: '/customers' },
     ...(on.visits
       ? [
-          { title: `Active ${label}s`, value: activeCount, icon: UserCheck, color: 'text-[#F15A24]', bg: 'bg-[#F15A24]/10', note: `Visited within ${threshold} days` },
+          { title: `Active ${label}s`, value: activeCount, icon: UserCheck, color: 'text-[#C81E5B]', bg: 'bg-[#C81E5B]/10', note: `Visited within ${threshold} days` },
           { title: `Inactive ${label}s`, value: inactiveCount, icon: UserX, color: 'text-amber-600', bg: 'bg-amber-50', note: `No visit in ${threshold}+ days`, href: '/campaigns' },
           { title: 'Visits This Month', value: visitsThisMonth ?? 0, icon: CalendarDays, color: 'text-blue-600', bg: 'bg-blue-50', href: '/visits' },
         ]
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
     { title: 'Total Leads', value: leadList.length, icon: UserPlus, color: 'text-gray-600', bg: 'bg-gray-100', href: '/leads' },
     { title: 'Open Leads', value: leadList.filter(l => l.status !== 'converted' && l.status !== 'lost').length, icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
     { title: 'Converted Leads', value: leadList.filter(l => l.status === 'converted').length, icon: Handshake, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { title: 'Follow-ups Due Today', value: dueTodayCount ?? 0, icon: BellRing, color: 'text-[#F15A24]', bg: 'bg-[#F15A24]/10', href: '/leads/due' },
+    { title: 'Follow-ups Due Today', value: dueTodayCount ?? 0, icon: BellRing, color: 'text-[#C81E5B]', bg: 'bg-[#C81E5B]/10', href: '/leads/due' },
   ]
 
   // ── appointments ──

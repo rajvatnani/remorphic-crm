@@ -27,9 +27,9 @@ export default async function OrdersPage({
   return (
     <div className="p-6 max-w-6xl">
       <div className="mb-6">
-        <h1 className="font-heading text-4xl font-extrabold text-gray-900 tracking-tight">Orders</h1>
+        <h1 className="font-heading text-4xl font-extrabold text-fest-ink tracking-tight">Orders</h1>
         <p className="text-sm text-gray-500 mt-1">
-          {unseen > 0 && <span className="font-semibold text-[#F15A24]">{unseen} new from your shop · </span>}
+          {unseen > 0 && <span className="font-semibold text-[#C81E5B]">{unseen} new from your shop · </span>}
           {open} open · {formatRupees(due)} to collect
         </p>
       </div>

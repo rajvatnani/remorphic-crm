@@ -3,7 +3,7 @@ import { Barlow, Inter, Cormorant_Garamond, Baloo_2 } from "next/font/google";
 import "./globals.css";
 
 const barlow = Barlow({
-  variable: "--font-heading",
+  variable: "--font-barlow",
   subsets: ["latin"],
   weight: ["600", "700", "800", "900"],
 });

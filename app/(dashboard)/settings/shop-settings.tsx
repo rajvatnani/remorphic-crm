@@ -66,7 +66,7 @@ export default function ShopSettings({ businessId }: { businessId: string }) {
 
   return (
     <form onSubmit={handleSave} className="space-y-2 pt-2">
-      <span className="block text-sm font-medium text-gray-900">Shop page</span>
+      <span className="block text-sm font-medium text-fest-ink">Shop page</span>
       <label className="block space-y-1">
         <span className="block text-xs text-gray-500">One-line description, under your name</span>
         <input value={description} onChange={e => { setDescription(e.target.value); setSaved(false) }} maxLength={120} placeholder="German silver gifts and pooja items" className={input} />
@@ -87,12 +87,12 @@ export default function ShopSettings({ businessId }: { businessId: string }) {
       </div>
       <p className="text-[11px] text-gray-400">Customers who collect (no address) pay no delivery.</p>
       <label className="flex items-center gap-2 text-sm text-gray-700">
-        <input type="checkbox" checked={showSoldOut} onChange={e => { setShowSoldOut(e.target.checked); setSaved(false) }} className="h-4 w-4 accent-[#F15A24]" />
+        <input type="checkbox" checked={showSoldOut} onChange={e => { setShowSoldOut(e.target.checked); setSaved(false) }} className="h-4 w-4 accent-[#C81E5B]" />
         Show sold-out items (greyed out, at the end)
       </label>
       {error && <p className="text-xs text-red-600 bg-red-50 rounded-lg px-2.5 py-1.5">{error}</p>}
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#F15A24' }}>
+        <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#C81E5B' }}>
           Save shop page
         </button>
         {saved && <span className="text-xs text-green-600">Saved</span>}

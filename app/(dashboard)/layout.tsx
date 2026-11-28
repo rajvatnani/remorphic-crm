@@ -32,7 +32,7 @@ export default async function DashboardLayout({
   const { business, isAdminViewing } = ctx
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-fest-cream">
       {isAdminViewing && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-amber-400 px-4 py-1.5 flex items-center justify-between text-sm">
           <span className="font-medium text-amber-900">

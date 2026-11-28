@@ -67,23 +67,23 @@ export default async function DueInteractionsPage() {
     <div className="p-6 max-w-5xl">
       <Link
         href="/leads"
-        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6"
+        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-fest-ink mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Leads
       </Link>
 
       <div className="mb-6">
-        <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">Due Today</h1>
+        <h1 className="font-heading font-heading text-4xl font-extrabold text-fest-ink tracking-tight tracking-tight">Due Today</h1>
         <p className="text-sm text-gray-500 mt-1">
           {rows.length} follow-up{rows.length === 1 ? '' : 's'} scheduled for today
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gray-50 hover:bg-gray-50">
+            <TableRow className="bg-fest-cream hover:bg-fest-cream">
               <TableHead className="font-medium">Lead</TableHead>
               <TableHead className="font-medium">Phone</TableHead>
               <TableHead className="font-medium">Status</TableHead>
@@ -101,9 +101,9 @@ export default async function DueInteractionsPage() {
               </TableRow>
             )}
             {rows.map(row => (
-              <TableRow key={row.id} className="hover:bg-gray-50">
+              <TableRow key={row.id} className="hover:bg-fest-cream">
                 <TableCell>
-                  <Link href={`/leads?open=${row.lead.id}`} className="font-medium text-gray-900 hover:underline" title="Open in Leads">
+                  <Link href={`/leads?open=${row.lead.id}`} className="font-medium text-fest-ink hover:underline" title="Open in Leads">
                     {row.lead.name}
                   </Link>
                 </TableCell>
@@ -120,8 +120,8 @@ export default async function DueInteractionsPage() {
                     <AddInteractionDialog leadId={row.lead.id} leadName={row.lead.name} compact />
                     <Link
                       href={`/leads?open=${row.lead.id}`}
-                      className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-orange-50 whitespace-nowrap"
-                      style={{ color: '#F15A24', borderColor: '#F15A24' }}
+                      className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-fest-ranisoft whitespace-nowrap"
+                      style={{ color: '#C81E5B', borderColor: '#C81E5B' }}
                     >
                       History →
                     </Link>

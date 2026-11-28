@@ -147,13 +147,13 @@ export default function OrderDialog({
           {/* Customer */}
           {order ? (
             <p className="text-sm text-gray-600">
-              {customerLabel}: <span className="font-medium text-gray-900">{order.customers?.name}</span>
+              {customerLabel}: <span className="font-medium text-fest-ink">{order.customers?.name}</span>
               {order.customers?.phone ? ` · ${order.customers.phone}` : ''}
             </p>
           ) : selectedCustomer ? (
-            <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+            <div className="flex items-center justify-between bg-fest-ranisoft border border-fest-line rounded-lg px-3 py-2">
               <span className="text-sm">
-                <span className="font-medium text-gray-900">{selectedCustomer.name}</span>
+                <span className="font-medium text-fest-ink">{selectedCustomer.name}</span>
                 <span className="text-gray-500"> · {selectedCustomer.phone || 'no phone'}</span>
               </span>
               <button type="button" onClick={() => setCustomerId(null)} className="text-xs text-gray-500 hover:text-gray-800">Change</button>
@@ -181,15 +181,15 @@ export default function OrderDialog({
                 autoComplete="off"
               />
               {customerMatches.length > 0 && (
-                <div className="border border-gray-200 rounded-lg divide-y divide-gray-100">
+                <div className="border border-fest-line rounded-lg divide-y divide-fest-line/70">
                   {customerMatches.map(c => (
                     <button
                       key={c.id}
                       type="button"
                       onClick={() => { setCustomerId(c.id); setCustomerQuery('') }}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-fest-ranisoft"
                     >
-                      <span className="font-medium text-gray-900">{c.name}</span>
+                      <span className="font-medium text-fest-ink">{c.name}</span>
                       <span className="text-gray-400"> · {c.phone || 'no phone'}</span>
                     </button>
                   ))}
@@ -203,7 +203,7 @@ export default function OrderDialog({
                   if (/\d{5,}/.test(customerQuery)) setNewPhone(customerQuery.trim())
                   else setNewName(customerQuery.trim())
                 }}
-                className="text-sm font-medium text-[#F15A24] hover:underline"
+                className="text-sm font-medium text-[#C81E5B] hover:underline"
               >
                 + New {customerLabel.toLowerCase()}
               </button>
@@ -269,7 +269,7 @@ export default function OrderDialog({
                 </div>
               ))}
             </div>
-            <button type="button" onClick={() => setLines(ls => [...ls, blankLine()])} className="inline-flex items-center gap-1 text-sm font-medium text-[#F15A24] hover:underline">
+            <button type="button" onClick={() => setLines(ls => [...ls, blankLine()])} className="inline-flex items-center gap-1 text-sm font-medium text-[#C81E5B] hover:underline">
               <Plus className="h-3.5 w-3.5" /> Add another item
             </button>
           </div>
@@ -294,15 +294,15 @@ export default function OrderDialog({
             <Textarea id="order_notes" value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Engraving, size, delivery address…" />
           </div>
 
-          <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+          <div className="flex items-center justify-between border-t border-fest-line/70 pt-3">
             <span className="text-sm text-gray-500">Total</span>
-            <span className="text-lg font-bold text-gray-900">{formatRupees(total)}</span>
+            <span className="text-lg font-bold text-fest-ink">{formatRupees(total)}</span>
           </div>
 
           {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
           <div className="flex gap-3">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-            <Button type="submit" className="flex-1 bg-[#F15A24] hover:bg-[#d44d1b] text-white" disabled={pending}>
+            <Button type="submit" className="flex-1 bg-[#C81E5B] hover:bg-[#A81549] text-white" disabled={pending}>
               {pending ? 'Saving…' : order ? 'Save changes' : 'Create order'}
             </Button>
           </div>

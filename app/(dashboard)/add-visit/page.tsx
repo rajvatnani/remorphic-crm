@@ -109,11 +109,11 @@ export default function AddVisitPage() {
   return (
     <div className="p-6 max-w-2xl">
       <div className="mb-6">
-        <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">Add Visit</h1>
+        <h1 className="font-heading font-heading text-4xl font-extrabold text-fest-ink tracking-tight tracking-tight">Add Visit</h1>
         <p className="text-sm text-gray-500 mt-1">Record a new visit for a {label.toLowerCase()}</p>
       </div>
 
-      <Card className="shadow-none border border-gray-200">
+      <Card className="shadow-none border-0">
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-5">
 
@@ -125,7 +125,7 @@ export default function AddVisitPage() {
                   name="customer_mode"
                   checked={!isNewCustomer}
                   onChange={() => { setIsNewCustomer(false); clearCustomer() }}
-                  className="accent-[#F15A24]"
+                  className="accent-[#C81E5B]"
                 />
                 Existing {label}
               </label>
@@ -135,7 +135,7 @@ export default function AddVisitPage() {
                   name="customer_mode"
                   checked={isNewCustomer}
                   onChange={() => { setIsNewCustomer(true); clearCustomer() }}
-                  className="accent-[#F15A24]"
+                  className="accent-[#C81E5B]"
                 />
                 New {label}
               </label>
@@ -176,15 +176,15 @@ export default function AddVisitPage() {
 
                   {/* Suggestions dropdown */}
                   {showSuggestions && filtered.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-fest-line rounded-lg shadow-lg overflow-hidden">
                       {filtered.map(c => (
                         <button
                           key={c.id}
                           type="button"
                           onMouseDown={() => selectCustomer(c)}
-                          className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center justify-between"
+                          className="w-full text-left px-4 py-2.5 hover:bg-fest-cream flex items-center justify-between"
                         >
-                          <span className="font-medium text-sm text-gray-900">{c.name}</span>
+                          <span className="font-medium text-sm text-fest-ink">{c.name}</span>
                           <span className="text-sm text-gray-400">{c.phone}</span>
                         </button>
                       ))}
@@ -193,7 +193,7 @@ export default function AddVisitPage() {
 
                   {/* No results */}
                   {showSuggestions && query.trim().length > 0 && filtered.length === 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-3 text-sm text-gray-400">
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-fest-line rounded-lg shadow-lg px-4 py-3 text-sm text-gray-400">
                       No {label.toLowerCase()}s found
                     </div>
                   )}
@@ -201,14 +201,14 @@ export default function AddVisitPage() {
 
                 {/* Selected customer confirmation */}
                 {selectedName && customerId && (
-                  <p className="text-xs text-[#F15A24] font-medium">✓ {selectedName} selected</p>
+                  <p className="text-xs text-[#C81E5B] font-medium">✓ {selectedName} selected</p>
                 )}
               </div>
             )}
 
             {/* New customer fields */}
             {isNewCustomer && (
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <div className="bg-fest-cream rounded-lg p-4 space-y-3">
                 <p className="text-sm font-medium text-gray-700">New {label} details</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
@@ -277,7 +277,7 @@ export default function AddVisitPage() {
 
             <Button
               type="submit"
-              className="w-full bg-[#F15A24] hover:bg-[#d44d1b] text-white"
+              className="w-full bg-[#C81E5B] hover:bg-[#A81549] text-white"
               disabled={pending || (!isNewCustomer && !customerId)}
             >
               {pending ? 'Saving…' : 'Save Visit'}

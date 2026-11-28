@@ -182,7 +182,7 @@ export default function FeaturesCard({
   const shopUrl = typeof window !== 'undefined' && slug ? `${window.location.origin}/shop/${slug}` : ''
 
   return (
-    <Card className="shadow-none border border-gray-200">
+    <Card className="shadow-none border-0">
       <CardHeader>
         <CardTitle className="text-base font-semibold">Features</CardTitle>
         <CardDescription>Turn on the parts your business uses. Everything is linked through your customers.</CardDescription>
@@ -193,7 +193,7 @@ export default function FeaturesCard({
           <Fragment key={m.key}>
           <label className="flex items-start justify-between gap-4 cursor-pointer">
             <span>
-              <span className="block text-sm font-medium text-gray-900">{m.label}</span>
+              <span className="block text-sm font-medium text-fest-ink">{m.label}</span>
               <span className="block text-xs text-gray-500">{m.description}</span>
             </span>
             <input
@@ -202,21 +202,21 @@ export default function FeaturesCard({
               checked={on[m.key]}
               disabled={pending}
               onChange={e => toggle(m.key, m.column, e.target.checked)}
-              className="mt-1 h-4 w-4 accent-[#F15A24]"
+              className="mt-1 h-4 w-4 accent-[#C81E5B]"
             />
           </label>
           {on[m.key] && extras[m.key] && (
-            <div className="ml-4 pl-4 border-l-2 border-orange-100 space-y-6 pb-2">
+            <div className="ml-4 pl-4 border-l-2 border-fest-line space-y-6 pb-2">
               {extras[m.key]}
             </div>
           )}
           </Fragment>
         ))}
         {on?.orders && (
-          <div className="ml-4 pl-4 border-l-2 border-orange-100 space-y-2">
+          <div className="ml-4 pl-4 border-l-2 border-fest-line space-y-2">
             <label className="flex items-start justify-between gap-4 cursor-pointer">
               <span>
-                <span className="block text-sm font-medium text-gray-900">Shop link</span>
+                <span className="block text-sm font-medium text-fest-ink">Shop link</span>
                 <span className="block text-xs text-gray-500">A page where customers see your items and order, with no login</span>
               </span>
               <input
@@ -225,16 +225,16 @@ export default function FeaturesCard({
                 checked={shopOn}
                 disabled={pending}
                 onChange={e => toggleShop(e.target.checked)}
-                className="mt-1 h-4 w-4 accent-[#F15A24]"
+                className="mt-1 h-4 w-4 accent-[#C81E5B]"
               />
             </label>
             {shopOn && shopUrl && (
               <div className="flex items-center gap-2">
-                <code className="flex-1 min-w-0 truncate text-xs bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5">{shopUrl}</code>
+                <code className="flex-1 min-w-0 truncate text-xs bg-fest-cream border border-fest-line rounded-lg px-2 py-1.5">{shopUrl}</code>
                 <button
                   type="button"
                   onClick={() => { navigator.clipboard?.writeText(shopUrl); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-                  className="text-xs font-medium text-[#F15A24] hover:underline whitespace-nowrap"
+                  className="text-xs font-medium text-[#C81E5B] hover:underline whitespace-nowrap"
                 >
                   {copied ? 'Copied' : 'Copy'}
                 </button>
@@ -243,7 +243,7 @@ export default function FeaturesCard({
             )}
             {shopOn && businessId && <ShopSettings businessId={businessId} />}
             <form onSubmit={saveItemSettings} className="space-y-2 pt-2">
-              <span className="block text-sm font-medium text-gray-900">Items</span>
+              <span className="block text-sm font-medium text-fest-ink">Items</span>
               <div className="grid grid-cols-2 gap-2">
                 <label className="space-y-1">
                   <span className="block text-xs text-gray-500">Code prefix for new items</span>
@@ -266,14 +266,14 @@ export default function FeaturesCard({
               </div>
               <p className="text-[11px] text-gray-400">New items get codes like {codePrefix || 'IT'}-001. An item&apos;s own low-stock alert overrides the default.</p>
               <div className="flex items-center gap-3">
-                <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#F15A24' }}>
+                <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#C81E5B' }}>
                   Save item settings
                 </button>
                 {itemSaved && <span className="text-xs text-green-600">Saved</span>}
               </div>
             </form>
             <form onSubmit={saveAiInstructions} className="space-y-2 pt-2">
-              <span className="block text-sm font-medium text-gray-900">AI writing instructions</span>
+              <span className="block text-sm font-medium text-fest-ink">AI writing instructions</span>
               <span className="block text-xs text-gray-500">Used each time you tap &ldquo;Fill details from photo with AI&rdquo; on an item.</span>
               <textarea
                 value={aiText}
@@ -284,14 +284,14 @@ export default function FeaturesCard({
                 className="w-full rounded-lg border border-input px-2.5 py-1.5 text-sm outline-none"
               />
               <div className="flex items-center gap-3">
-                <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#F15A24' }}>
+                <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#C81E5B' }}>
                   Save AI instructions
                 </button>
                 {aiSaved && <span className="text-xs text-green-600">Saved</span>}
               </div>
             </form>
             <form onSubmit={saveAlertEmail} className="space-y-2 pt-2">
-              <span className="block text-sm font-medium text-gray-900">Email new shop orders to</span>
+              <span className="block text-sm font-medium text-fest-ink">Email new shop orders to</span>
               <div className="flex gap-2">
                 <input
                   type="email"
@@ -300,13 +300,13 @@ export default function FeaturesCard({
                   placeholder="Leave blank for no emails"
                   className="flex-1 min-w-0 h-8 rounded-lg border border-input px-2.5 text-sm outline-none"
                 />
-                <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#F15A24' }}>
+                <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#C81E5B' }}>
                   Save
                 </button>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs">
                 {loginEmail && alertEmail.trim() !== loginEmail && (
-                  <button type="button" onClick={() => { setAlertEmail(loginEmail); setAlertSaved(false) }} className="text-[#F15A24] hover:underline">
+                  <button type="button" onClick={() => { setAlertEmail(loginEmail); setAlertSaved(false) }} className="text-[#C81E5B] hover:underline">
                     Use {loginEmail}
                   </button>
                 )}
@@ -319,7 +319,7 @@ export default function FeaturesCard({
               )}
             </form>
             <form onSubmit={saveInvoiceDetails} className="space-y-2 pt-2">
-              <span className="block text-sm font-medium text-gray-900">Invoice details</span>
+              <span className="block text-sm font-medium text-fest-ink">Invoice details</span>
               <input
                 value={gstin}
                 onChange={e => { setGstin(e.target.value); setInvoiceSaved(false) }}
@@ -335,7 +335,7 @@ export default function FeaturesCard({
                 className="w-full rounded-lg border border-input px-2.5 py-1.5 text-sm outline-none"
               />
               <div className="flex items-center gap-3">
-                <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#F15A24' }}>
+                <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#C81E5B' }}>
                   Save invoice details
                 </button>
                 {invoiceSaved && <span className="text-xs text-green-600">Saved</span>}

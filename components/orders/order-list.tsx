@@ -26,7 +26,7 @@ const PAYMENT_STYLE = {
   pending: 'bg-red-50 text-red-600',
   partial: 'bg-amber-50 text-amber-700',
   paid: 'bg-emerald-50 text-emerald-700',
-  cod: 'bg-orange-50 text-orange-700',
+  cod: 'bg-fest-ranisoft text-fest-rani',
   refunded: 'bg-gray-100 text-gray-600',
 } as const
 const PAYMENT_LABEL = { pending: 'Unpaid', partial: 'Part paid', paid: 'Paid', cod: 'Cash on delivery', refunded: 'Refunded' } as const
@@ -148,7 +148,7 @@ export default function OrderList({
         )}
         <Button
           onClick={() => setDialog({ order: null, customerId: fixedCustomerId, n: Date.now() })}
-          className="bg-[#F15A24] hover:bg-[#d44d1b] text-white gap-2 ml-auto"
+          className="bg-[#C81E5B] hover:bg-[#A81549] text-white gap-2 ml-auto"
           size={compact ? 'sm' : 'default'}
         >
           <Plus className="h-4 w-4" /> New Order
@@ -162,7 +162,7 @@ export default function OrderList({
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                tab === t.key ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+                tab === t.key ? 'bg-fest-plum text-white' : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               {t.label}{counts[t.key] ? ` (${counts[t.key]})` : ''}
@@ -171,10 +171,10 @@ export default function OrderList({
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gray-50 hover:bg-gray-50">
+            <TableRow className="bg-fest-cream hover:bg-fest-cream">
               <TableHead>Order</TableHead>
               {!fixedCustomerId && <TableHead>{customerLabel}</TableHead>}
               <TableHead>Items</TableHead>
@@ -198,17 +198,17 @@ export default function OrderList({
               const more = o.order_items.length - 1
               return (
                 <Fragment key={o.id}>
-                  <TableRow className={`cursor-pointer hover:bg-gray-50 ${isOpen ? 'bg-orange-50/40 border-b-0' : ''}`} onClick={() => toggle(o.id)}>
+                  <TableRow className={`cursor-pointer hover:bg-fest-cream ${isOpen ? 'bg-fest-marigoldsoft/40 border-b-0' : ''}`} onClick={() => toggle(o.id)}>
                     <TableCell className="whitespace-nowrap">
-                      <span className="font-semibold text-gray-900">#{o.order_no}</span>
-                      {isUnseen(o) && !seenNow.has(o.id) && <Badge className="ml-1.5 bg-[#F15A24] text-white border-0 text-[10px]">New</Badge>}
-                      {o.source === 'shop' && <Badge className="ml-1.5 bg-orange-50 text-[#F15A24] border-0 text-[10px]">Shop</Badge>}
+                      <span className="font-semibold text-fest-ink">#{o.order_no}</span>
+                      {isUnseen(o) && !seenNow.has(o.id) && <Badge className="ml-1.5 bg-[#C81E5B] text-white border-0 text-[10px]">New</Badge>}
+                      {o.source === 'shop' && <Badge className="ml-1.5 bg-fest-ranisoft text-[#C81E5B] border-0 text-[10px]">Shop</Badge>}
                       <span className="block text-xs text-gray-400">{fmtDate(o.created_at)}</span>
                     </TableCell>
                     {!fixedCustomerId && (
                       <TableCell>
                         {o.customers ? (
-                          <Link href={`/customers/${o.customers.id}`} onClick={e => e.stopPropagation()} className="font-medium text-gray-900 hover:underline">
+                          <Link href={`/customers/${o.customers.id}`} onClick={e => e.stopPropagation()} className="font-medium text-fest-ink hover:underline">
                             {o.customers.name}
                           </Link>
                         ) : '—'}
@@ -233,7 +233,7 @@ export default function OrderList({
                     </TableCell>
                   </TableRow>
                   {isOpen && (
-                    <TableRow className="bg-orange-50/40 hover:bg-orange-50/40">
+                    <TableRow className="bg-fest-marigoldsoft/40 hover:bg-fest-ranisoft/40">
                       <TableCell colSpan={cols} className="px-4 pb-4 pt-0 whitespace-normal">
                         <OrderDetail
                           key={`${o.id}-${o.paid_paise}`}

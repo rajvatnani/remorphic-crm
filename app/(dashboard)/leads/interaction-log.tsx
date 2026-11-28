@@ -47,7 +47,7 @@ function todayStr() {
 
 function followUpBadgeClass(followUpDate: string, today: string) {
   if (followUpDate < today) return 'text-red-600 font-medium'
-  if (followUpDate === today) return 'text-[#F15A24] font-medium'
+  if (followUpDate === today) return 'text-[#C81E5B] font-medium'
   return 'text-gray-600'
 }
 
@@ -101,10 +101,10 @@ export default function InteractionLog({ leadId, interactions }: { leadId: strin
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="bg-gray-50 hover:bg-gray-50">
+          <TableRow className="bg-fest-cream hover:bg-fest-cream">
             <SortableHead label="Date" sortKey="date" sort={sort} onSort={key => setSort(s => toggleSort(s, key))} />
             <SortableHead label="Type" sortKey="type" sort={sort} onSort={key => setSort(s => toggleSort(s, key))} />
             <TableHead className="font-medium">Details</TableHead>
@@ -122,10 +122,10 @@ export default function InteractionLog({ leadId, interactions }: { leadId: strin
             </TableRow>
           )}
           {sorted.map(row => (
-            <TableRow key={row.id} className="hover:bg-gray-50">
+            <TableRow key={row.id} className="hover:bg-fest-cream">
               <TableCell className="text-gray-600 whitespace-nowrap">{formatDate(row.occurredAt)}</TableCell>
               <TableCell>
-                <span className="font-medium text-gray-900">{TYPE_LABELS[row.type]}</span>
+                <span className="font-medium text-fest-ink">{TYPE_LABELS[row.type]}</span>
               </TableCell>
               <TableCell className="text-gray-600">{formatDetails(row)}</TableCell>
               <TableCell className="text-gray-500">{row.notes || '—'}</TableCell>
