@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
+import AddInteractionDialog from '../add-interaction-dialog'
 
 function localDateStr(d: Date) {
   const y = d.getFullYear()
@@ -102,7 +103,7 @@ export default async function DueInteractionsPage() {
             {rows.map(row => (
               <TableRow key={row.id} className="hover:bg-gray-50">
                 <TableCell>
-                  <Link href={`/leads/${row.lead.id}`} className="font-medium text-gray-900 hover:underline">
+                  <Link href={`/leads?open=${row.lead.id}`} className="font-medium text-gray-900 hover:underline" title="Open in Leads">
                     {row.lead.name}
                   </Link>
                 </TableCell>
@@ -115,13 +116,16 @@ export default async function DueInteractionsPage() {
                 <TableCell className="text-gray-600">{TYPE_LABELS[row.type]}</TableCell>
                 <TableCell className="text-gray-500">{row.notes || '—'}</TableCell>
                 <TableCell className="text-right">
-                  <Link
-                    href={`/leads/${row.lead.id}`}
-                    className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-orange-50"
-                    style={{ color: '#F15A24', borderColor: '#F15A24' }}
-                  >
-                    View Lead →
-                  </Link>
+                  <div className="flex items-center justify-end gap-1">
+                    <AddInteractionDialog leadId={row.lead.id} leadName={row.lead.name} compact />
+                    <Link
+                      href={`/leads?open=${row.lead.id}`}
+                      className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-orange-50 whitespace-nowrap"
+                      style={{ color: '#F15A24', borderColor: '#F15A24' }}
+                    >
+                      History →
+                    </Link>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

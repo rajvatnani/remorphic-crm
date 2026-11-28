@@ -91,7 +91,7 @@ export default function InteractionLog({ leadId, interactions }: { leadId: strin
     if (!window.confirm('Delete this interaction? This cannot be undone.')) return
     setDeletingId(id)
     try {
-      await deleteInteraction(id, leadId)
+      await deleteInteraction(id)
       router.refresh()
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to delete interaction')

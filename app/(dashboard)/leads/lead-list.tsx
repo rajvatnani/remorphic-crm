@@ -1,11 +1,11 @@
 'use client'
 
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { deleteLead } from '@/app/actions/leads'
 import EditLeadDialog from './edit-lead-dialog'
-import AddInteractionDialog from './[id]/add-interaction-dialog'
-import InteractionLog, { type InteractionRow } from './[id]/interaction-log'
+import AddInteractionDialog from './add-interaction-dialog'
+import InteractionLog, { type InteractionRow } from './interaction-log'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -56,11 +56,22 @@ function cmp(a: string, b: string) {
 export default function LeadList({
   leads,
   interactionsByLead,
+  initialOpen,
 }: {
   leads: LeadRow[]
   interactionsByLead: Record<string, InteractionRow[]>
+  /** A lead to show with its history open, e.g. from Due Today */
+  initialOpen?: string
 }) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(initialOpen ? [initialOpen] : [])
+  )
+
+  useEffect(() => {
+    if (initialOpen) {
+      document.getElementById(`lead-${initialOpen}`)?.scrollIntoView({ block: 'center' })
+    }
+  }, [initialOpen])
 
   function setOpen(id: string, open: boolean) {
     setExpanded(prev => {
@@ -178,7 +189,7 @@ export default function LeadList({
               const isOpen = expanded.has(row.id)
               return (
                 <Fragment key={row.id}>
-                  <TableRow className={`hover:bg-gray-50 ${isOpen ? 'bg-orange-50/40 border-b-0' : ''}`}>
+                  <TableRow id={`lead-${row.id}`} className={`hover:bg-gray-50 ${isOpen ? 'bg-orange-50/40 border-b-0' : ''}`}>
                     <TableCell>
                       <span className="font-medium text-gray-900">{row.name}</span>
                     </TableCell>

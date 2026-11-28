@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { BellRing } from 'lucide-react'
 import AddLeadDialog from './add-lead-dialog'
 import LeadList from './lead-list'
-import type { InteractionRow } from './[id]/interaction-log'
+import type { InteractionRow } from './interaction-log'
 import ExportCsvButton from '@/components/export-csv-button'
 import { LEAD_STATUSES, type LeadStatus } from '@/types'
 
@@ -18,7 +18,12 @@ function localDateStr(d: Date) {
   return `${y}-${m}-${day}`
 }
 
-export default async function LeadsPage() {
+export default async function LeadsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ open?: string }>
+}) {
+  const { open } = await searchParams
   const ctx = await getBusinessContext()
   if (!ctx) return null
   const { supabase, business } = ctx
@@ -95,7 +100,7 @@ export default async function LeadsPage() {
         </div>
       </div>
 
-      <LeadList leads={leads ?? []} interactionsByLead={interactionsByLead} />
+      <LeadList leads={leads ?? []} interactionsByLead={interactionsByLead} initialOpen={open} />
     </div>
   )
 }
