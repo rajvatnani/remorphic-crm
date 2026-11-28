@@ -20,7 +20,7 @@ function fmtDate(iso: string | null) {
   return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })
 }
 
-const PAYMENT_LABEL: Record<string, string> = { pending: 'Unpaid', partial: 'Part paid', paid: 'Paid' }
+const PAYMENT_LABEL: Record<string, string> = { pending: 'Unpaid', partial: 'Part paid', paid: 'Paid', cod: 'Cash on delivery', refunded: 'Refunded' }
 
 export default async function InvoicePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params
@@ -30,7 +30,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ token:
   const { business: b } = inv
   const subtotal = inv.lines.reduce((s, l) => s + l.qty * l.price_paise, 0)
   const total = Math.max(subtotal + inv.delivery_paise - inv.discount_paise, 0)
-  const balance = Math.max(total - inv.paid_paise, 0)
+  const balance = inv.payment_status === 'refunded' ? 0 : Math.max(total - inv.paid_paise, 0)
 
   return (
     <main className="min-h-screen bg-gray-50 print:bg-white">

@@ -20,14 +20,16 @@ export default async function OrdersPage({
   const { orders, items, customers, categories } = await loadOrderData(supabase, business.id)
 
   const live = orders.filter(o => o.status !== 'cancelled')
-  const due = live.reduce((s, o) => s + Math.max(orderTotal(o) - o.paid_paise, 0), 0)
+  const due = live.filter(o => o.payment_status !== 'refunded').reduce((s, o) => s + Math.max(orderTotal(o) - o.paid_paise, 0), 0)
   const open = live.filter(o => o.status !== 'delivered').length
+  const unseen = orders.filter(o => o.source === 'shop' && !o.seen_at && o.status === 'new').length
 
   return (
     <div className="p-6 max-w-6xl">
       <div className="mb-6">
         <h1 className="font-heading text-4xl font-extrabold text-gray-900 tracking-tight">Orders</h1>
         <p className="text-sm text-gray-500 mt-1">
+          {unseen > 0 && <span className="font-semibold text-[#F15A24]">{unseen} new from your shop · </span>}
           {open} open · {formatRupees(due)} to collect
         </p>
       </div>

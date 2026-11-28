@@ -1,46 +1,46 @@
 'use client'
 
-import { Fragment, useEffect, useMemo, useState, useTransition } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { setOrderStatus, setOrderPayment, getOrderScreenshotUrl } from '@/app/actions/orders'
-import { formatRupees, toRupeesInput } from '@/lib/money'
-import { ORDER_STATUSES, orderTotal, hasInvoice, type Item, type ItemCategory, type Order, type OrderStatus } from '@/types'
+import { markOrdersSeen } from '@/app/actions/orders'
+import { formatRupees } from '@/lib/money'
+import { orderTotal, type Item, type ItemCategory, type Order, type OrderStatus } from '@/types'
 import OrderDialog, { type CustomerOption } from './order-dialog'
+import OrderDetail, { STATUS_LABEL } from './order-detail'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ChevronDown, Plus, Search, Pencil, FileText, MessageCircle, Receipt } from 'lucide-react'
+import { ChevronDown, Plus, Search } from 'lucide-react'
 
 const STATUS_STYLE: Record<OrderStatus, string> = {
   new: 'bg-purple-50 text-purple-700',
   confirmed: 'bg-blue-50 text-blue-700',
   ready: 'bg-amber-50 text-amber-700',
+  shipped: 'bg-sky-50 text-sky-700',
   delivered: 'bg-emerald-50 text-emerald-700',
   cancelled: 'bg-gray-100 text-gray-500',
 }
-const STATUS_LABEL = Object.fromEntries(ORDER_STATUSES.map(s => [s.value, s.label])) as Record<OrderStatus, string>
 
 const PAYMENT_STYLE = {
   pending: 'bg-red-50 text-red-600',
   partial: 'bg-amber-50 text-amber-700',
   paid: 'bg-emerald-50 text-emerald-700',
+  cod: 'bg-orange-50 text-orange-700',
+  refunded: 'bg-gray-100 text-gray-600',
 } as const
-const PAYMENT_LABEL = { pending: 'Unpaid', partial: 'Part paid', paid: 'Paid' } as const
+const PAYMENT_LABEL = { pending: 'Unpaid', partial: 'Part paid', paid: 'Paid', cod: 'Cash on delivery', refunded: 'Refunded' } as const
 
-// The next step for each status, and its button label
-const NEXT: Partial<Record<OrderStatus, { to: OrderStatus; label: string }>> = {
-  new: { to: 'confirmed', label: 'Confirm' },
-  confirmed: { to: 'ready', label: 'Mark ready' },
-  ready: { to: 'delivered', label: 'Mark delivered' },
-}
+/** A shop order nobody has opened yet */
+const isUnseen = (o: Order) => o.source === 'shop' && !o.seen_at && o.status === 'new'
 
 type Tab = 'open' | OrderStatus | 'unpaid' | 'all'
 const TABS: { key: Tab; label: string }[] = [
   { key: 'open', label: 'Open' },
   { key: 'new', label: 'New' },
   { key: 'confirmed', label: 'Confirmed' },
-  { key: 'ready', label: 'Ready' },
+  { key: 'ready', label: 'Packed' },
+  { key: 'shipped', label: 'Shipped' },
   { key: 'delivered', label: 'Delivered' },
   { key: 'unpaid', label: 'Payment due' },
   { key: 'cancelled', label: 'Cancelled' },
@@ -51,171 +51,13 @@ function inTab(o: Order, tab: Tab) {
   switch (tab) {
     case 'all': return true
     case 'open': return o.status !== 'delivered' && o.status !== 'cancelled'
-    case 'unpaid': return o.status !== 'cancelled' && o.payment_status !== 'paid'
+    case 'unpaid': return o.status !== 'cancelled' && o.payment_status !== 'paid' && o.payment_status !== 'refunded'
     default: return o.status === tab
   }
 }
 
 function fmtDate(d: string) {
   return new Date(d.length === 10 ? d + 'T00:00:00' : d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-function InvoiceButtons({ order, total }: { order: Order; total: number }) {
-  const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/invoice/${order.public_token}`
-  const phone = (order.customers?.phone ?? '').replace(/\D/g, '')
-  const text = encodeURIComponent(
-    `Hi ${order.customers?.name ?? ''}, here is the invoice for your order #${order.order_no} (${formatRupees(total)}): ${url}`
-  )
-  return (
-    <>
-      <a
-        href={`/invoice/${order.public_token}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-gray-200 text-[0.8rem] font-medium text-gray-700 hover:bg-gray-50"
-      >
-        <FileText className="h-3.5 w-3.5" /> Invoice
-      </a>
-      {phone && (
-        <a
-          href={`https://wa.me/${phone}?text=${text}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-green-200 text-[0.8rem] font-medium text-green-700 hover:bg-green-50"
-        >
-          <MessageCircle className="h-3.5 w-3.5" /> Send invoice
-        </a>
-      )}
-    </>
-  )
-}
-
-function OrderDetail({ order, onEdit }: { order: Order; onEdit: () => void }) {
-  const router = useRouter()
-  const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
-  const total = orderTotal(order)
-  const [paid, setPaid] = useState(toRupeesInput(order.paid_paise) || '')
-  const subtotal = order.order_items.reduce((s, l) => s + l.price_paise * l.qty, 0)
-  const cost = order.order_items.every(l => l.cost_paise != null)
-    ? order.order_items.reduce((s, l) => s + (l.cost_paise ?? 0) * l.qty, 0)
-    : null
-  const next = NEXT[order.status]
-  const editable = order.status !== 'delivered' && order.status !== 'cancelled'
-
-  function run(fn: () => Promise<{ ok: boolean; error?: string }>) {
-    setError(null)
-    startTransition(async () => {
-      const res = await fn()
-      if (!res.ok) { setError(res.error ?? 'Something went wrong.'); return }
-      router.refresh()
-    })
-  }
-
-  return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
-      <table className="w-full text-sm">
-        <tbody className="divide-y divide-gray-100">
-          {order.order_items.map(l => (
-            <tr key={l.id}>
-              <td className="py-1.5 text-gray-900">{l.name}</td>
-              <td className="py-1.5 text-gray-500 text-right whitespace-nowrap">{l.qty} × {formatRupees(l.price_paise)}</td>
-              <td className="py-1.5 text-right font-medium whitespace-nowrap w-28">{formatRupees(l.qty * l.price_paise)}</td>
-            </tr>
-          ))}
-          {order.delivery_paise > 0 && (
-            <tr><td className="py-1.5 text-gray-500" colSpan={2}>Delivery</td><td className="py-1.5 text-right">{formatRupees(order.delivery_paise)}</td></tr>
-          )}
-          {order.discount_paise > 0 && (
-            <tr><td className="py-1.5 text-gray-500" colSpan={2}>Discount</td><td className="py-1.5 text-right">−{formatRupees(order.discount_paise)}</td></tr>
-          )}
-          <tr><td className="py-1.5 font-semibold" colSpan={2}>Total</td><td className="py-1.5 text-right font-semibold">{formatRupees(total)}</td></tr>
-        </tbody>
-      </table>
-
-      <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500">
-        {order.address && <span>Deliver to: {[order.address, order.city, order.pincode].filter(Boolean).join(', ')}</span>}
-        {order.due_date && <span>Due {fmtDate(order.due_date)}</span>}
-        {cost != null && order.status !== 'cancelled' && (
-          <span>Profit {formatRupees(subtotal - order.discount_paise - cost)}</span>
-        )}
-        {order.notes && <span className="italic">{order.notes}</span>}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {next && (
-          <Button size="sm" disabled={pending} onClick={() => run(() => setOrderStatus(order.id, next.to))} className="bg-[#F15A24] hover:bg-[#d44d1b] text-white">
-            {next.label}
-          </Button>
-        )}
-        {editable && (
-          <Button size="sm" variant="outline" disabled={pending} onClick={onEdit} className="gap-1">
-            <Pencil className="h-3.5 w-3.5" /> Edit
-          </Button>
-        )}
-        {editable && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={pending}
-            onClick={() => { if (window.confirm(`Cancel order #${order.order_no}? Any stock it took goes back.`)) run(() => setOrderStatus(order.id, 'cancelled')) }}
-            className="text-red-600 hover:text-red-700"
-          >
-            Cancel order
-          </Button>
-        )}
-        {order.status === 'cancelled' && (
-          <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => setOrderStatus(order.id, 'new'))}>
-            Reopen
-          </Button>
-        )}
-        {hasInvoice(order.status) && order.public_token && <InvoiceButtons order={order} total={total} />}
-      </div>
-
-      {order.status !== 'cancelled' && (
-        <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
-          {order.payment_screenshot && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1 text-emerald-700"
-              onClick={async () => {
-                // Open the tab first so the browser does not block it
-                const tab = window.open('', '_blank')
-                const url = await getOrderScreenshotUrl(order.id)
-                if (url && tab) tab.location.href = url
-                else { tab?.close(); setError('Could not open the screenshot.') }
-              }}
-            >
-              <Receipt className="h-3.5 w-3.5" /> Payment screenshot
-            </Button>
-          )}
-          <span className="text-sm text-gray-600">Received ₹</span>
-          <input
-            value={paid}
-            onChange={e => setPaid(e.target.value)}
-            inputMode="decimal"
-            className="h-8 w-28 rounded-lg border border-input px-2 text-sm outline-none focus:border-orange-400"
-          />
-          <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => setOrderPayment(order.id, paid || '0'))}>
-            Save
-          </Button>
-          {order.payment_status !== 'paid' && (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={pending}
-              onClick={() => { setPaid(toRupeesInput(total)); run(() => setOrderPayment(order.id, toRupeesInput(total))) }}
-            >
-              Mark fully paid
-            </Button>
-          )}
-        </div>
-      )}
-
-      {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
-    </div>
-  )
 }
 
 export default function OrderList({
@@ -272,7 +114,14 @@ export default function OrderList({
     })
   }, [orders, tab, search])
 
+  // Opened here, so no longer new; the marker goes on the next refresh
+  const [seenNow, setSeenNow] = useState<Set<string>>(new Set())
   function toggle(id: string) {
+    const order = orders.find(o => o.id === id)
+    if (order && isUnseen(order) && !seenNow.has(id)) {
+      setSeenNow(s => new Set(s).add(id))
+      markOrdersSeen([id]).catch(() => {}) // the marker just stays until next time
+    }
     setExpanded(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -352,6 +201,7 @@ export default function OrderList({
                   <TableRow className={`cursor-pointer hover:bg-gray-50 ${isOpen ? 'bg-orange-50/40 border-b-0' : ''}`} onClick={() => toggle(o.id)}>
                     <TableCell className="whitespace-nowrap">
                       <span className="font-semibold text-gray-900">#{o.order_no}</span>
+                      {isUnseen(o) && !seenNow.has(o.id) && <Badge className="ml-1.5 bg-[#F15A24] text-white border-0 text-[10px]">New</Badge>}
                       {o.source === 'shop' && <Badge className="ml-1.5 bg-orange-50 text-[#F15A24] border-0 text-[10px]">Shop</Badge>}
                       <span className="block text-xs text-gray-400">{fmtDate(o.created_at)}</span>
                     </TableCell>

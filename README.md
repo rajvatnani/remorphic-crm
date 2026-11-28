@@ -85,6 +85,7 @@ SQL files in [`supabase/`](supabase) are run by hand in the Supabase SQL Editor.
 20. `order_email_migration.sql`
 21. `items_details_migration.sql`
 22. `shop_extras_migration.sql`
+23. `order_steps_migration.sql`
 
 When code needs a database change, add a new file and note here where it goes in the order. Run it in Supabase **before** merging the code that depends on it.
 
@@ -105,6 +106,7 @@ Rules to keep:
 - **Order emails:** each new shop order is emailed to `businesses.order_alert_email` if it is set and Resend is configured. A failed email never stops the order.
 - **Item details:** items have MRP, wholesaler (never shown to customers), a low-stock alert level (blank = the business's `default_low_stock`), up to 5 `photos` (the first is the cover and is copied to `photo_url`), tags from a fixed list (`lib/item-tags.ts`, matched by a check constraint) and `archived`. Archiving also takes an item off sale. A blank code gets the next automatic one (`item_code_prefix` + `next_item_no`, moved only by the `items_assign_code` trigger, which members cannot edit).
 - **Shop page extras:** `shop_description`, `upi_id` (a Pay by UPI button and QR with the amount, on the customer's order page and invoice), `delivery_flat_paise` and `free_delivery_above_paise` (worked out in `place_shop_order2`; no delivery when the customer collects), and `show_sold_out`. Shop orders keep `city` and `pincode`. Links to one category or item are `/shop/<slug>?category=<id>` and `/shop/<slug>?item=<code>`. `place_shop_order` is no longer called and can be dropped.
+- **Order steps:** new → confirmed → packed (stored as `ready`) → shipped → delivered, or cancelled. Packed orders can go straight to delivered when handed over. `change_order_status` saves the courier, tracking number and `delivery_cost_paise` (taken off profit) when shipping, and `cancel_reason` when cancelling. A trigger writes every change to `order_status_history`, which members can read but not write. `record_order_payment` handles cash on delivery (`cod`), `refunded` and the UPI reference. Shop orders show as New until opened (`seen_at`, set by `mark_orders_seen`).
 - **Customers without a phone:** online bookings may leave the phone blank, stored as `''`. `sendWhatsApp` skips those, so code that messages customers must keep going through it.
 
 ### Not yet in this repository

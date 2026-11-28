@@ -21,7 +21,7 @@ export default async function ReportsPage({
   const [{ data: orderRows }, { data: itemRows }, { data: categoryRows }] = await Promise.all([
     supabase
       .from('orders')
-      .select('id, order_no, status, created_at, paid_paise, delivery_paise, discount_paise, customer_id, customers(id, name, phone), order_items(item_id, name, qty, price_paise, cost_paise)')
+      .select('id, order_no, status, created_at, paid_paise, delivery_paise, discount_paise, delivery_cost_paise, payment_status, customer_id, customers(id, name, phone), order_items(item_id, name, qty, price_paise, cost_paise)')
       .eq('business_id', business.id)
       .neq('status', 'cancelled')
       .order('created_at'),

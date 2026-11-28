@@ -218,6 +218,9 @@ export interface ShopOrderView {
   lines: { name: string; qty: number; price_paise: number }[]
   business: ShopBusiness
   has_screenshot: boolean
+  courier: string | null
+  tracking_no: string | null
+  cancel_reason: string | null
 }
 
 /** The customer's own order page, found by its unguessable token */
@@ -226,7 +229,7 @@ export async function getShopOrder(slug: string, token: string): Promise<ShopOrd
   const admin = adminClient()
   const { data: order } = await admin
     .from('orders')
-    .select('order_no, status, payment_status, paid_paise, delivery_paise, discount_paise, address, city, pincode, notes, created_at, business_id, payment_screenshot, customers(name), order_items(name, qty, price_paise)')
+    .select('order_no, status, payment_status, paid_paise, delivery_paise, discount_paise, address, city, pincode, notes, created_at, business_id, payment_screenshot, courier, tracking_no, cancel_reason, customers(name), order_items(name, qty, price_paise)')
     .eq('public_token', token)
     .maybeSingle()
   if (!order) return null
@@ -253,6 +256,9 @@ export async function getShopOrder(slug: string, token: string): Promise<ShopOrd
     lines: order.order_items as ShopOrderView['lines'],
     business: business as ShopBusiness,
     has_screenshot: Boolean(order.payment_screenshot),
+    courier: order.courier,
+    tracking_no: order.tracking_no,
+    cancel_reason: order.cancel_reason,
   }
 }
 
@@ -282,7 +288,7 @@ export async function uploadOrderPaymentScreenshot(token: string, upload: FormDa
     .maybeSingle()
   if (!order) return { ok: false, error: 'Order not found.' }
   if (order.status === 'cancelled') return { ok: false, error: 'This order was cancelled.' }
-  if (order.payment_status === 'paid') return { ok: false, error: 'This order is already marked as paid.' }
+  if (order.payment_status === 'paid' || order.payment_status === 'refunded') return { ok: false, error: 'This order is already settled.' }
   // A slow drip of replacements is fine; a flood is not
   if (order.payment_screenshot_at && Date.now() - new Date(order.payment_screenshot_at).getTime() < 30_000) {
     return { ok: false, error: 'Please wait a moment before sending another screenshot.' }
@@ -349,7 +355,7 @@ export async function getInvoice(token: string): Promise<InvoiceView | null> {
     .select('order_no, status, created_at, delivered_at, payment_status, paid_paise, delivery_paise, discount_paise, address, city, pincode, business_id, customers(name, phone), order_items(name, qty, price_paise)')
     .eq('public_token', token)
     .maybeSingle()
-  if (!order || !['confirmed', 'ready', 'delivered'].includes(order.status)) return null
+  if (!order || !['confirmed', 'ready', 'shipped', 'delivered'].includes(order.status)) return null
 
   const { data: business } = await admin
     .from('businesses')

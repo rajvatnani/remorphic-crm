@@ -17,7 +17,8 @@ export const metadata: Metadata = {
 const STATUS_TEXT: Record<string, string> = {
   new: 'Received, waiting for the shop to confirm',
   confirmed: 'Confirmed',
-  ready: 'Ready',
+  ready: 'Packed',
+  shipped: 'On its way',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
 }
@@ -72,10 +73,17 @@ export default async function ShopOrderPage({ params }: { params: Promise<{ slug
             </tbody>
           </table>
           {order.address && <p className="text-xs text-gray-500 mt-3">Deliver to: {order.address}</p>}
+          {order.status === 'shipped' && (order.courier || order.tracking_no) && (
+            <p className="text-sm text-gray-700 mt-2">Sent{order.courier ? ` by ${order.courier}` : ''}{order.tracking_no ? ` · Tracking number ${order.tracking_no}` : ''}</p>
+          )}
+          {order.status === 'cancelled' && order.cancel_reason && <p className="text-sm text-gray-600 mt-2">Reason: {order.cancel_reason}</p>}
           {order.notes && <p className="text-xs text-gray-500 mt-1">Note: {order.notes}</p>}
         </div>
 
-        {order.status !== 'cancelled' && order.payment_status !== 'paid' && due > 0 && (
+        {order.payment_status === 'cod' && order.status !== 'cancelled' && (
+          <p className="bg-white rounded-3xl shadow-sm p-5 text-center text-sm text-gray-700">Pay {formatRupees(due)} in cash on delivery.</p>
+        )}
+        {order.status !== 'cancelled' && !['paid', 'refunded', 'cod'].includes(order.payment_status) && due > 0 && (
           <div className="bg-white rounded-3xl shadow-sm p-5 text-center space-y-3">
             {!order.business.upi_id && <p className="font-semibold text-gray-900">Pay {formatRupees(due)}</p>}
             {order.business.upi_id ? (

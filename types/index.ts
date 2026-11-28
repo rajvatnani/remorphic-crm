@@ -151,13 +151,15 @@ export interface ItemCategory {
   position: number
 }
 
-export type OrderStatus = 'new' | 'confirmed' | 'ready' | 'delivered' | 'cancelled'
-export type PaymentStatus = 'pending' | 'partial' | 'paid'
+export type OrderStatus = 'new' | 'confirmed' | 'ready' | 'shipped' | 'delivered' | 'cancelled'
+export type PaymentStatus = 'pending' | 'partial' | 'paid' | 'cod' | 'refunded'
 
 export const ORDER_STATUSES: { value: OrderStatus; label: string }[] = [
   { value: 'new', label: 'New' },
   { value: 'confirmed', label: 'Confirmed' },
-  { value: 'ready', label: 'Ready' },
+  // 'ready' is stored as before and shown as Packed
+  { value: 'ready', label: 'Packed' },
+  { value: 'shipped', label: 'Shipped' },
   { value: 'delivered', label: 'Delivered' },
   { value: 'cancelled', label: 'Cancelled' },
 ]
@@ -191,6 +193,12 @@ export interface Order {
   delivered_at?: string | null
   payment_screenshot?: string | null
   payment_screenshot_at?: string | null
+  courier?: string | null
+  tracking_no?: string | null
+  delivery_cost_paise?: number
+  upi_ref?: string | null
+  cancel_reason?: string | null
+  seen_at?: string | null
   customers: { id: string; name: string; phone: string } | null
   order_items: OrderLine[]
 }
@@ -202,5 +210,5 @@ export function orderTotal(o: Pick<Order, 'delivery_paise' | 'discount_paise' | 
 
 /** Orders that have an invoice: confirmed or later, not cancelled */
 export function hasInvoice(status: OrderStatus | string) {
-  return status === 'confirmed' || status === 'ready' || status === 'delivered'
+  return status === 'confirmed' || status === 'ready' || status === 'shipped' || status === 'delivered'
 }

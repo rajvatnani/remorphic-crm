@@ -1,7 +1,7 @@
 // Order and stock reports. Pure functions over rows already loaded, so the
 // numbers can be checked without a database.
 //
-// Only orders that are confirmed, ready or delivered count: new orders are
+// Only orders that are confirmed, packed ('ready'), shipped or delivered count: new orders are
 // not yet accepted and cancelled ones never happened.
 // Sales = item lines + delivery − discount. Profit uses only lines whose cost
 // is known (+ delivery − discount); `linesWithoutCost` says how many were left out.
@@ -22,6 +22,8 @@ export interface ReportOrder {
   paid_paise: number
   delivery_paise: number
   discount_paise: number
+  delivery_cost_paise?: number
+  payment_status?: string
   customer_id: string
   customers: { id: string; name: string; phone: string } | null
   order_items: ReportLine[]
@@ -40,7 +42,7 @@ export interface ReportItem {
   archived?: boolean
 }
 
-export const COUNTED = new Set(['confirmed', 'ready', 'delivered'])
+export const COUNTED = new Set(['confirmed', 'ready', 'shipped', 'delivered'])
 export const LOW_STOCK = 2 // used when a business has no default of its own
 
 export type RangeKey = '7d' | '30d' | '90d' | 'month' | 'year' | 'all'
@@ -91,7 +93,8 @@ export function orderSales(o: ReportOrder) {
 export function orderProfit(o: ReportOrder) {
   const margin = o.order_items.reduce(
     (s, l) => s + (l.cost_paise == null ? 0 : (l.price_paise - l.cost_paise) * l.qty), 0)
-  return margin + o.delivery_paise - o.discount_paise
+  // What the business paid the courier comes off the profit
+  return margin + o.delivery_paise - o.discount_paise - (o.delivery_cost_paise ?? 0)
 }
 
 export function inRange(o: ReportOrder, start: string | null) {
@@ -260,7 +263,7 @@ export function repeatCustomers(orders: ReportOrder[]) {
 /** Accepted orders not fully paid, oldest first */
 export function pendingPayments(orders: ReportOrder[]) {
   return orders
-    .filter(o => COUNTED.has(o.status))
+    .filter(o => COUNTED.has(o.status) && o.payment_status !== 'refunded')
     .map(o => ({ order: o, total: orderSales(o), due: Math.max(orderSales(o) - o.paid_paise, 0) }))
     .filter(r => r.due > 0)
     .sort((a, b) => a.order.created_at.localeCompare(b.order.created_at))
