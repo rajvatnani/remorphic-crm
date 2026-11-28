@@ -7,6 +7,7 @@ import { emailConfigured } from '@/lib/email'
 import { normalizePhone, isValidPhone } from '@/lib/phone'
 import { toPaise } from '@/lib/money'
 import type { OrderStatus } from '@/types'
+import { cleanTags } from '@/lib/item-tags'
 
 type Result<T = undefined> = { ok: true; data?: T } | { ok: false; error: string }
 
@@ -36,6 +37,11 @@ export interface ItemInput {
   active: boolean
   photo_url?: string | null
   category_id?: string | null
+  mrp?: string
+  wholesaler?: string
+  low_stock_level?: string
+  tags?: string[]
+  photos?: string[]
 }
 
 // Only photos uploaded to this project's business-photos bucket
@@ -55,17 +61,29 @@ function cleanItem(input: ItemInput) {
   const stockText = input.stock?.trim() ?? ''
   const stock = stockText === '' ? null : Number.parseInt(stockText, 10)
   if (stock !== null && !Number.isFinite(stock)) return { error: 'Stock must be a whole number.' }
+  const mrp = input.mrp?.trim() ? toPaise(input.mrp) : null
+  if (mrp !== null && mrp <= 0) return { error: 'MRP must be more than zero, or left blank.' }
+  const lowText = input.low_stock_level?.trim() ?? ''
+  const low = lowText === '' ? null : Number.parseInt(lowText, 10)
+  if (low !== null && (!Number.isFinite(low) || low < 0)) return { error: 'Low-stock alert must be 0 or more, or left blank.' }
+  // Up to 5, only from our own bucket, no repeats; the first is the cover
+  const photos = [...new Set((input.photos ?? (input.photo_url ? [input.photo_url] : [])).map(cleanPhotoUrl).filter((u): u is string => !!u))].slice(0, 5)
   return {
     row: {
       name,
-      code: input.code?.trim() || null,
+      code: input.code?.trim().toUpperCase().slice(0, 30) || null,
       description: input.description?.trim() || null,
       price_paise: price,
       cost_paise: cost,
       stock,
       active: Boolean(input.active),
-      photo_url: cleanPhotoUrl(input.photo_url),
+      photos,
+      photo_url: photos[0] ?? null,
       category_id: input.category_id || null,
+      mrp_paise: mrp,
+      wholesaler: input.wholesaler?.trim().slice(0, 120) || null,
+      low_stock_level: low,
+      tags: cleanTags(input.tags),
     },
   }
 }
@@ -75,11 +93,25 @@ export async function saveItem(itemId: string | null, input: ItemInput): Promise
   if ('error' in cleaned) return { ok: false, error: cleaned.error! }
   const { supabase, business } = await getBusiness()
 
+  // A blank code on a new item gets the next automatic one; on an
+  // existing item it leaves the current code alone
+  const { code, ...rest } = cleaned.row
   const { error } = itemId
-    ? await supabase.from('items').update(cleaned.row).eq('id', itemId)
+    ? await supabase.from('items').update(code ? cleaned.row : rest).eq('id', itemId)
     : await supabase.from('items').insert({ ...cleaned.row, business_id: business.id })
   if (error) return { ok: false, error: error.message }
 
+  refresh()
+  return { ok: true }
+}
+
+/** Archived items leave the shop, new orders and stock reports, but keep their history */
+export async function setItemArchived(itemId: string, archived: boolean): Promise<Result> {
+  const { supabase } = await getBusiness()
+  // Archiving also takes it off sale, so the shop's order check refuses it;
+  // restoring puts it back on sale
+  const { error } = await supabase.from('items').update({ archived, active: !archived }).eq('id', itemId)
+  if (error) return { ok: false, error: error.message }
   refresh()
   return { ok: true }
 }

@@ -20,6 +20,7 @@ export default async function ItemsPage() {
       items={(items ?? []) as Item[]}
       categories={(categories ?? []) as ItemCategory[]}
       businessId={business.id}
+      defaultLowStock={business.default_low_stock ?? 2}
     />
   )
 }

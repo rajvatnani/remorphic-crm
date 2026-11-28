@@ -47,7 +47,8 @@ const td = 'py-2 px-2 text-gray-700'
 const tdR = td + ' text-right whitespace-nowrap tabular-nums'
 
 /** The reports themselves, from rows already loaded */
-export default function ReportsView({ orders, items, categories, customerLabel, range, idle }: {
+export default function ReportsView({ orders, items, categories, customerLabel, range, idle, defaultLowStock = LOW_STOCK }: {
+  defaultLowStock?: number
   orders: ReportOrder[]
   items: ReportItem[]
   categories: { id: string; name: string }[]
@@ -69,7 +70,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
   const byQty = [...sellers].sort((a, b) => b.qty - a.qty || b.sales - a.sales).slice(0, 10)
   const byProfit = sellers.filter(s => s.profit !== null).sort((a, b) => b.profit! - a.profit!).slice(0, 10)
   const dead = deadStock(items, orders, idle)
-  const reorder = reorderList(items)
+  const reorder = reorderList(items, defaultLowStock)
   const value = stockValue(items, categories)
   const repeat = repeatCustomers(orders)
   const pending = pendingPayments(orders)
@@ -212,7 +213,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
       <div className="grid lg:grid-cols-2 gap-5">
         <Section
           title="Running low"
-          note={`Items on sale with ${LOW_STOCK} or fewer in stock`}
+          note={`Items on sale at or below their low-stock alert (shop default ${defaultLowStock})`}
           csv={{ name: 'running-low', headers: ['Item', 'Code', 'In stock'], rows: reorder.map(i => [i.name, i.code ?? '', i.stock ?? 0]) }}
         >
           {reorder.length === 0 ? <Empty>Nothing is running low.</Empty> : (

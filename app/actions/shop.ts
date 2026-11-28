@@ -33,6 +33,9 @@ export interface ShopItem {
   stock: number | null
   photo_url: string | null
   category_id: string | null
+  mrp_paise: number | null
+  tags: string[]
+  photos: string[]
 }
 
 export interface ShopCategory {
@@ -62,9 +65,10 @@ export async function getShopData(slug: string): Promise<{ business: ShopBusines
   const [{ data: items }, { data: categories }] = await Promise.all([
     admin
       .from('items')
-      .select('id, name, code, description, price_paise, stock, photo_url, category_id')
+      .select('id, name, code, description, price_paise, stock, photo_url, category_id, mrp_paise, tags, photos')
       .eq('business_id', business.id)
       .eq('active', true)
+      .eq('archived', false)
       .order('name'),
     admin
       .from('item_categories')

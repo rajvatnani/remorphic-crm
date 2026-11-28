@@ -36,10 +36,12 @@ export interface ReportItem {
   stock: number | null
   active: boolean
   category_id?: string | null
+  low_stock_level?: number | null
+  archived?: boolean
 }
 
 export const COUNTED = new Set(['confirmed', 'ready', 'delivered'])
-export const LOW_STOCK = 2
+export const LOW_STOCK = 2 // used when a business has no default of its own
 
 export type RangeKey = '7d' | '30d' | '90d' | 'month' | 'year' | 'all'
 export const RANGES: { key: RangeKey; label: string }[] = [
@@ -207,7 +209,7 @@ export function deadStock(items: ReportItem[], orders: ReportOrder[], days: numb
   const since = addDays(istDay(now), -(days - 1))
   const sold = lastSold(orders)
   return items
-    .filter(i => (i.stock ?? 0) > 0 && (sold.get(i.id) ?? '') < since)
+    .filter(i => !i.archived && (i.stock ?? 0) > 0 && (sold.get(i.id) ?? '') < since)
     .map(i => ({
       item: i,
       lastSold: sold.get(i.id) ?? null,
@@ -217,10 +219,10 @@ export function deadStock(items: ReportItem[], orders: ReportOrder[], days: numb
     .sort((a, b) => (b.valueAtCost ?? b.valueAtPrice) - (a.valueAtCost ?? a.valueAtPrice))
 }
 
-/** Tracked items still on sale at or below the low-stock level, emptiest first */
-export function reorderList(items: ReportItem[]) {
+/** Tracked items still on sale at or below their low-stock level (or the business default), emptiest first */
+export function reorderList(items: ReportItem[], defaultLow = LOW_STOCK) {
   return items
-    .filter(i => i.active && i.stock != null && i.stock <= LOW_STOCK)
+    .filter(i => i.active && !i.archived && i.stock != null && i.stock <= (i.low_stock_level ?? defaultLow))
     .sort((a, b) => (a.stock ?? 0) - (b.stock ?? 0) || a.name.localeCompare(b.name))
 }
 
@@ -229,7 +231,7 @@ export function stockValue(items: ReportItem[], categories: { id: string; name: 
   const order = [...categories.map(c => c.id), '']
   for (const id of order) rows.set(id, { name: categories.find(c => c.id === id)?.name ?? 'No category', units: 0, atCost: 0, atPrice: 0, costMissing: 0 })
   for (const i of items) {
-    if (!i.stock || i.stock <= 0) continue
+    if (i.archived || !i.stock || i.stock <= 0) continue
     const row = rows.get(i.category_id && rows.has(i.category_id) ? i.category_id : '')!
     row.units += i.stock
     row.atPrice += i.stock * i.price_paise

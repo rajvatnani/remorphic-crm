@@ -25,7 +25,7 @@ export default async function ReportsPage({
       .eq('business_id', business.id)
       .neq('status', 'cancelled')
       .order('created_at'),
-    supabase.from('items').select('id, name, code, price_paise, cost_paise, stock, active, category_id').eq('business_id', business.id).order('name'),
+    supabase.from('items').select('id, name, code, price_paise, cost_paise, stock, active, category_id, low_stock_level, archived').eq('business_id', business.id).order('name'),
     supabase.from('item_categories').select('id, name').eq('business_id', business.id).order('position').order('name'),
   ])
 
@@ -35,6 +35,7 @@ export default async function ReportsPage({
       items={(itemRows ?? []) as ReportItem[]}
       categories={(categoryRows ?? []) as { id: string; name: string }[]}
       customerLabel={business.customer_label ?? 'Customer'}
+      defaultLowStock={business.default_low_stock ?? 2}
       range={range}
       idle={idle}
     />
