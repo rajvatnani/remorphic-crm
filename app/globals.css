@@ -46,6 +46,34 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Shop pages: warm boutique look (from Remorphic Saathi) */
+  --color-store-cream: #FBF8F3;
+  --color-store-sand: #F2ECE2;
+  --color-store-line: #E7DFD3;
+  --color-store-ink: #1C1915;
+  --color-store-night: #15120E;
+  --color-store-gold: #C9A46A;
+  --color-store-golddark: #8A6A35;
+
+  /* Dashboard: festive bazaar colours (from Remorphic Saathi) */
+  --color-fest-cream: #FFF6E6;
+  --color-fest-line: #F1E0C2;
+  --color-fest-ink: #2B1626;
+  --color-fest-plum: #5A1747;
+  --color-fest-plumdeep: #3A0F2E;
+  --color-fest-rani: #C81E5B;
+  --color-fest-ranidark: #A81549;
+  --color-fest-ranisoft: #FDE3EC;
+  --color-fest-marigold: #FFB41F;
+  --color-fest-marigoldsoft: #FFE9B8;
+  --color-fest-leaf: #12824C;
+  --color-fest-leafsoft: #D5F2E0;
+  --color-fest-sky: #1B6FB3;
+  --color-fest-skysoft: #DAEDFB;
+
+  --font-display: var(--font-display);
+  --font-friendly: var(--font-friendly);
 }
 
 :root {

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { placeShopOrder, type ShopBusiness, type ShopItem, type ShopCategory } from '@/app/actions/shop'
 import { formatRupees } from '@/lib/money'
 import { itemTags } from '@/lib/item-tags'
-import { MapPin, Search, ShoppingBag, Minus, Plus, X, Package } from 'lucide-react'
+import PhotoViewer from './photo-viewer'
+import { Search, ShoppingBag, Minus, Plus, MapPin, Maximize2, ArrowLeft } from 'lucide-react'
 
 type Cart = Record<string, number> // item id → qty
 
@@ -13,98 +14,19 @@ function maxQty(item: ShopItem) {
   return item.stock == null ? 99 : Math.max(item.stock, 0)
 }
 
-function QtyControl({ item, q, setQty }: { item: ShopItem; q: number; setQty: (item: ShopItem, qty: number) => void }) {
-  const soldOut = maxQty(item) === 0
-  if (soldOut) return <span className="text-xs font-semibold text-gray-400">Sold out</span>
-  if (!q) {
-    return (
-      <button
-        onClick={e => { e.stopPropagation(); setQty(item, 1) }}
-        className="px-4 h-9 rounded-xl text-sm font-semibold text-white"
-        style={{ backgroundColor: '#F15A24' }}
-      >
-        Add
-      </button>
-    )
-  }
-  return (
-    <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-      <button onClick={() => setQty(item, q - 1)} className="w-9 h-9 rounded-xl border-2 border-orange-200 flex items-center justify-center" aria-label="One less">
-        <Minus className="w-4 h-4" />
-      </button>
-      <span className="w-8 text-center font-semibold">{q}</span>
-      <button
-        onClick={() => setQty(item, q + 1)}
-        disabled={q >= maxQty(item)}
-        className="w-9 h-9 rounded-xl border-2 border-orange-200 flex items-center justify-center disabled:opacity-40"
-        aria-label="One more"
-      >
-        <Plus className="w-4 h-4" />
-      </button>
-    </div>
-  )
+function photosOf(item: ShopItem) {
+  return item.photos?.length ? item.photos : item.photo_url ? [item.photo_url] : []
 }
 
-function Price({ item, large = false }: { item: ShopItem; large?: boolean }) {
-  const mrp = item.mrp_paise != null && item.mrp_paise > item.price_paise ? item.mrp_paise : null
-  return (
-    <span className="flex flex-wrap items-baseline gap-x-1.5">
-      <span className={`font-bold text-gray-900 ${large ? 'text-2xl' : ''}`}>{formatRupees(item.price_paise)}</span>
-      {mrp && (
-        <>
-          <span className={`text-gray-400 line-through ${large ? 'text-base' : 'text-xs'}`}>{formatRupees(mrp)}</span>
-          <span className={`font-semibold text-green-700 ${large ? 'text-sm' : 'text-[11px]'}`}>{Math.round((1 - item.price_paise / mrp) * 100)}% off</span>
-        </>
-      )}
-    </span>
-  )
+// WhatsApp link to the business, Indian 10-digit numbers get +91
+function waLink(phone: string | null | undefined, text: string) {
+  const digits = (phone ?? '').replace(/\D/g, '')
+  if (!digits) return null
+  const n = digits.length === 10 ? '91' + digits : digits
+  return `https://wa.me/${n}?text=${encodeURIComponent(text)}`
 }
 
-function Tags({ item }: { item: ShopItem }) {
-  const tags = itemTags(item.tags)
-  if (!tags.length) return null
-  return (
-    <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1 pointer-events-none">
-      {tags.map(t => <span key={t.key} className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-sm ${t.style}`}>{t.label}</span>)}
-    </div>
-  )
-}
-
-function Gallery({ item }: { item: ShopItem }) {
-  const photos = item.photos?.length ? item.photos : item.photo_url ? [item.photo_url] : []
-  const [index, setIndex] = useState(0)
-  if (!photos.length) return <Photo item={item} className="w-full aspect-square" />
-  return (
-    <div>
-      <div className="relative">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photos[index]} alt={item.name} className="w-full aspect-square object-cover" />
-        <Tags item={item} />
-      </div>
-      {photos.length > 1 && (
-        <div className="flex gap-2 px-5 pt-3 overflow-x-auto">
-          {photos.map((url, i) => (
-            <button key={url} onClick={() => setIndex(i)} className={`shrink-0 rounded-lg overflow-hidden border-2 ${i === index ? 'border-[#F15A24]' : 'border-transparent'}`} aria-label={`Photo ${i + 1}`}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt="" className="w-14 h-14 object-cover" />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function Photo({ item, className }: { item: ShopItem; className: string }) {
-  return item.photo_url ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={item.photo_url} alt={item.name} className={`${className} object-cover`} />
-  ) : (
-    <div className={`${className} bg-orange-50 flex items-center justify-center`}>
-      <Package className="w-8 h-8 text-orange-200" />
-    </div>
-  )
-}
+const inputClass = 'w-full h-12 px-5 rounded-full border border-store-line bg-white text-sm outline-none focus:border-store-gold focus:ring-2 focus:ring-store-gold/20'
 
 export default function ShopView({
   business,
@@ -121,19 +43,20 @@ export default function ShopView({
   /** From an item link: /shop/<slug>?item=<code> */
   initialItem?: string
 }) {
+  const router = useRouter()
+  const storageKey = `custozo-cart-${business.slug}`
   const [category, setCategory] = useState<string>(
     initialCategory && categories.some(c => c.id === initialCategory) ? initialCategory : 'all'
   )
   const [sort, setSort] = useState<'new' | 'low' | 'high' | 'name'>('new')
-  const router = useRouter()
-  const storageKey = `custozo-cart-${business.slug}`
+  const [search, setSearch] = useState('')
   const [cart, setCart] = useState<Cart>({})
   const [loaded, setLoaded] = useState(false)
-  const [search, setSearch] = useState('')
-  const [view, setView] = useState<'browse' | 'cart'>('browse')
-  const [detail, setDetail] = useState<ShopItem | null>(
-    () => (initialItem ? items.find(i => i.code?.toLowerCase() === initialItem.toLowerCase()) ?? null : null)
-  )
+  const [view, setView] = useState<'browse' | 'bag'>('browse')
+  const [viewer, setViewer] = useState<{ item: ShopItem; index: number } | null>(null)
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [justAdded, setJustAdded] = useState<string | null>(null)
+  const linkedItem = initialItem ? items.find(i => i.code?.toLowerCase() === initialItem.toLowerCase()) : undefined
 
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
@@ -144,7 +67,7 @@ export default function ShopView({
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
-  // The cart lives on the customer's phone, one per shop. It can only be
+  // The bag lives on the customer's phone, one per shop. It can only be
   // read after the page has loaded in the browser.
   useEffect(() => {
     try {
@@ -166,7 +89,7 @@ export default function ShopView({
       if (details?.city) setCity(details.city)
       if (details?.pincode) setPincode(details.pincode)
     } catch {
-      // storage blocked: the cart still works for this visit
+      // storage blocked: the bag still works for this visit
     }
     setLoaded(true)
   }, [storageKey, items])
@@ -175,6 +98,11 @@ export default function ShopView({
     if (!loaded) return
     try { window.localStorage.setItem(storageKey, JSON.stringify(cart)) } catch { /* ignore */ }
   }, [cart, loaded, storageKey])
+
+  // An item link scrolls to that item
+  useEffect(() => {
+    if (linkedItem) document.getElementById(`item-${linkedItem.id}`)?.scrollIntoView({ block: 'center' })
+  }, [linkedItem])
 
   function setQty(item: ShopItem, qty: number) {
     setError(null)
@@ -187,7 +115,13 @@ export default function ShopView({
     })
   }
 
-  const filtered = useMemo(() => {
+  function addToBag(item: ShopItem) {
+    setQty(item, (cart[item.id] ?? 0) + 1)
+    setJustAdded(item.id)
+    setTimeout(() => setJustAdded(cur => (cur === item.id ? null : cur)), 1400)
+  }
+
+  const shown = useMemo(() => {
     const q = search.trim().toLowerCase()
     const list = items.filter(i => {
       if (category !== 'all' && i.category_id !== category) return false
@@ -207,24 +141,18 @@ export default function ShopView({
     )
   }, [items, search, category, sort])
 
-  // With "All" picked, show items under category headings, in the business's order
-  const groups = useMemo(() => {
-    if (category !== 'all' || !categories.length) return [{ id: 'all', name: '', items: filtered }]
-    const known = new Set(categories.map(c => c.id))
-    return [
-      ...categories.map(c => ({ id: c.id, name: c.name, items: filtered.filter(i => i.category_id === c.id) })),
-      { id: 'other', name: 'Other', items: filtered.filter(i => !i.category_id || !known.has(i.category_id)) },
-    ].filter(g => g.items.length)
-  }, [category, categories, filtered])
-
-  const cartLines = items.filter(i => cart[i.id])
-  const count = cartLines.reduce((s, i) => s + cart[i.id], 0)
-  const subtotal = cartLines.reduce((s, i) => s + cart[i.id] * i.price_paise, 0)
+  const bagLines = items.filter(i => cart[i.id])
+  const count = bagLines.reduce((s, i) => s + cart[i.id], 0)
+  const subtotal = bagLines.reduce((s, i) => s + cart[i.id] * i.price_paise, 0)
   // Same rule as the database: delivery only when there is an address, free above the limit
   const freeAbove = business.free_delivery_above_paise ?? null
   const freeByRule = freeAbove !== null && subtotal >= freeAbove
   const delivery = !address.trim() || freeByRule ? 0 : business.delivery_flat_paise ?? 0
   const total = subtotal + delivery
+
+  const heroPhotos = items.map(i => ({ url: photosOf(i)[0], name: i.name })).filter(p => p.url).slice(0, 3)
+  const eyebrow = categories.length ? categories.map(c => c.name).join(' · ') : 'The collection'
+  const chatLink = waLink(business.phone, `Hi ${business.name}, I'd like to know more about your collection.`)
 
   function handlePlace(e: React.FormEvent) {
     e.preventDefault()
@@ -233,7 +161,7 @@ export default function ShopView({
       const res = await placeShopOrder({
         businessId: business.id,
         name, phone, address, city, pincode, note,
-        lines: cartLines.map(i => ({ item_id: i.id, qty: cart[i.id] })),
+        lines: bagLines.map(i => ({ item_id: i.id, qty: cart[i.id] })),
       })
       if (!res.ok) { setError(res.error); return }
       try {
@@ -244,222 +172,355 @@ export default function ShopView({
     })
   }
 
-  // ── cart + checkout ────────────────────────────────────────────────────────
-  if (view === 'cart') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-rose-50">
-        <div className="max-w-lg mx-auto px-4 py-8">
-          <button onClick={() => setView('browse')} className="text-sm text-gray-500 hover:text-gray-800 mb-4">← Keep shopping</button>
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Your order</h1>
+  const header = (
+    <header className="sticky top-0 z-30 border-b border-store-line/70 bg-store-cream/90 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <button onClick={() => { setView('browse'); window.scrollTo(0, 0) }} className="flex min-w-0 items-center gap-3 text-left">
+          {business.photo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={business.photo} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-store-line" />
+          )}
+          <span className="truncate font-display text-2xl font-semibold leading-none tracking-wide">{business.name}</span>
+        </button>
+        <button
+          onClick={() => { setView('bag'); window.scrollTo(0, 0) }}
+          className="relative inline-flex items-center gap-2 rounded-full bg-store-ink px-4 py-2 text-sm font-semibold text-store-cream hover:bg-black"
+          aria-label={`Bag, ${count} items`}
+        >
+          <ShoppingBag className="h-4 w-4" /> Bag
+          {count > 0 && <span className="rounded-full bg-store-gold px-2 py-0.5 text-xs font-extrabold text-store-night">{count}</span>}
+        </button>
+      </div>
+    </header>
+  )
 
-          {cartLines.length === 0 ? (
-            <p className="text-gray-500 bg-white rounded-2xl p-6 text-center">Your cart is empty.</p>
+  const footer = (
+    <footer className="bg-store-night text-store-cream">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-12 text-center">
+        <div className="font-display text-3xl font-semibold tracking-wide">{business.name}</div>
+        {business.shop_description && <p className="max-w-md text-sm text-store-cream/70">{business.shop_description}</p>}
+        {business.address && <p className="flex items-center gap-1 text-xs text-store-cream/60"><MapPin className="h-3.5 w-3.5" />{business.address}</p>}
+        {chatLink && (
+          <a href={chatLink} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-2 rounded-full border border-store-gold/60 px-5 py-2 text-sm font-semibold text-store-gold hover:bg-store-gold hover:text-store-night">
+            Chat with us on WhatsApp
+          </a>
+        )}
+        <p className="mt-6 text-xs text-store-cream/40">Powered by Custozo</p>
+      </div>
+    </footer>
+  )
+
+  // ── bag + checkout ─────────────────────────────────────────────────────────
+  if (view === 'bag') {
+    return (
+      <div className="flex min-h-screen flex-col bg-store-cream text-store-ink">
+        {header}
+        <main className="mx-auto w-full max-w-xl flex-1 px-4 py-8">
+          <button onClick={() => setView('browse')} className="mb-4 inline-flex items-center gap-1 text-sm font-semibold text-store-ink/60 hover:text-store-ink">
+            <ArrowLeft className="h-4 w-4" /> Keep shopping
+          </button>
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-store-golddark">Checkout</p>
+          <h1 className="mb-5 font-display text-4xl font-semibold">Your bag</h1>
+
+          {bagLines.length === 0 ? (
+            <p className="rounded-3xl border border-store-line bg-white p-8 text-center text-store-ink/60">Your bag is empty.</p>
           ) : (
             <>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-100 mb-4">
-                {cartLines.map(item => (
-                  <div key={item.id} className="flex items-center gap-3 p-3">
-                    <Photo item={item} className="w-14 h-14 rounded-xl shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 text-sm truncate">{item.name}</p>
-                      <p className="text-xs text-gray-500">{formatRupees(item.price_paise)} each</p>
+              <div className="mb-4 divide-y divide-store-line rounded-3xl border border-store-line bg-white">
+                {bagLines.map(item => {
+                  const q = cart[item.id]
+                  const photo = photosOf(item)[0]
+                  return (
+                    <div key={item.id} className="flex items-center gap-3 p-4">
+                      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-store-sand">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        {photo && <img src={photo} alt="" className="h-full w-full object-cover" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-display text-lg font-semibold leading-tight">{item.name}</p>
+                        <p className="text-xs text-store-ink/60">{formatRupees(item.price_paise)} each</p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setQty(item, q - 1)} className="flex h-9 w-9 items-center justify-center rounded-full border border-store-line hover:bg-store-sand" aria-label="One less"><Minus className="h-4 w-4" /></button>
+                        <span className="w-7 text-center font-bold">{q}</span>
+                        <button onClick={() => setQty(item, q + 1)} disabled={q >= maxQty(item)} className="flex h-9 w-9 items-center justify-center rounded-full border border-store-line hover:bg-store-sand disabled:opacity-40" aria-label="One more"><Plus className="h-4 w-4" /></button>
+                      </div>
                     </div>
-                    <QtyControl item={item} q={cart[item.id] ?? 0} setQty={setQty} />
-                  </div>
-                ))}
-                {(business.delivery_flat_paise ?? 0) > 0 && (
-                  <div className="p-3 text-sm space-y-1">
-                    <div className="flex justify-between text-gray-600">
-                      <span>Delivery</span>
-                      <span>{!address.trim() ? 'None if you collect' : delivery === 0 ? 'Free' : formatRupees(delivery)}</span>
-                    </div>
-                    {freeAbove !== null && !freeByRule && (
-                      <p className="text-xs text-green-700">Add {formatRupees(freeAbove - subtotal)} more for free delivery.</p>
-                    )}
-                  </div>
-                )}
-                <div className="flex justify-between p-3 font-semibold">
-                  <span>Total</span>
-                  <span>{formatRupees(total)}</span>
+                  )
+                })}
+                <div className="space-y-1 p-4 text-sm">
+                  <div className="flex justify-between text-store-ink/70"><span>Items</span><span>{formatRupees(subtotal)}</span></div>
+                  {(business.delivery_flat_paise ?? 0) > 0 && (
+                    <>
+                      <div className="flex justify-between text-store-ink/70">
+                        <span>Delivery</span>
+                        <span>{!address.trim() ? 'None if you collect' : delivery === 0 ? 'Free' : formatRupees(delivery)}</span>
+                      </div>
+                      {freeAbove !== null && !freeByRule && (
+                        <p className="text-xs font-semibold text-green-700">Add {formatRupees(freeAbove - subtotal)} more for free delivery.</p>
+                      )}
+                    </>
+                  )}
+                  <div className="flex justify-between pt-1 text-base font-bold"><span>Total</span><span>{formatRupees(total)}</span></div>
                 </div>
               </div>
 
-              <form onSubmit={handlePlace} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="s_name">Your name</label>
-                  <input id="s_name" value={name} onChange={e => setName(e.target.value)} required className="w-full h-11 px-4 rounded-xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="s_phone">Mobile number</label>
-                  <input id="s_phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="98765 43210" className="w-full h-11 px-4 rounded-xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="s_address">Delivery address <span className="text-gray-400 font-normal">(leave blank to collect)</span></label>
-                  <textarea id="s_address" value={address} onChange={e => setAddress(e.target.value)} rows={2} className="w-full px-4 py-2 rounded-xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm" />
-                </div>
+              <form onSubmit={handlePlace} className="space-y-3 rounded-3xl border border-store-line bg-white p-5">
+                <label className="block space-y-1">
+                  <span className="text-sm font-semibold">Your name</span>
+                  <input value={name} onChange={e => setName(e.target.value)} required className={inputClass} />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-sm font-semibold">Mobile number</span>
+                  <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="98765 43210" className={inputClass} />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-sm font-semibold">Delivery address <span className="font-normal text-store-ink/50">(leave blank to collect)</span></span>
+                  <textarea value={address} onChange={e => setAddress(e.target.value)} rows={2} className="w-full rounded-2xl border border-store-line bg-white px-5 py-3 text-sm outline-none focus:border-store-gold focus:ring-2 focus:ring-store-gold/20" />
+                </label>
                 {address.trim() && (
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-700" htmlFor="s_city">City</label>
-                      <input id="s_city" value={city} onChange={e => setCity(e.target.value)} className="w-full h-11 px-4 rounded-xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-sm font-medium text-gray-700" htmlFor="s_pin">Pincode</label>
-                      <input id="s_pin" value={pincode} onChange={e => setPincode(e.target.value)} inputMode="numeric" maxLength={7} className="w-full h-11 px-4 rounded-xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm" />
-                    </div>
+                    <label className="block space-y-1">
+                      <span className="text-sm font-semibold">City</span>
+                      <input value={city} onChange={e => setCity(e.target.value)} className={inputClass} />
+                    </label>
+                    <label className="block space-y-1">
+                      <span className="text-sm font-semibold">Pincode</span>
+                      <input value={pincode} onChange={e => setPincode(e.target.value)} inputMode="numeric" maxLength={7} className={inputClass} />
+                    </label>
                   </div>
                 )}
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="s_note">Note <span className="text-gray-400 font-normal">(optional)</span></label>
-                  <input id="s_note" value={note} onChange={e => setNote(e.target.value)} placeholder="Size, colour, gift wrap…" className="w-full h-11 px-4 rounded-xl border-2 border-gray-200 focus:border-[#F15A24] outline-none text-sm" />
-                </div>
-                {error && <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-xl">{error}</p>}
-                <button type="submit" disabled={pending} className="w-full h-12 rounded-2xl text-white font-semibold disabled:opacity-50" style={{ backgroundColor: '#F15A24' }}>
+                <label className="block space-y-1">
+                  <span className="text-sm font-semibold">Note <span className="font-normal text-store-ink/50">(optional)</span></span>
+                  <input value={note} onChange={e => setNote(e.target.value)} placeholder="Size, colour, gift wrap…" className={inputClass} />
+                </label>
+                {error && <p className="rounded-2xl bg-red-50 px-4 py-2 text-sm text-red-600">{error}</p>}
+                <button type="submit" disabled={pending} className="h-12 w-full rounded-full bg-store-ink font-bold text-store-cream hover:bg-black disabled:opacity-50">
                   {pending ? 'Placing order…' : `Place order · ${formatRupees(total)}`}
                 </button>
-                <p className="text-xs text-gray-400 text-center">{business.name} will confirm your order and how to pay.</p>
+                <p className="text-center text-xs text-store-ink/50">{business.name} will confirm your order and how to pay.</p>
               </form>
             </>
           )}
-        </div>
+        </main>
+        {footer}
       </div>
     )
   }
 
   // ── browse ─────────────────────────────────────────────────────────────────
+  const chip = (active: boolean) =>
+    `shrink-0 rounded-full px-5 py-2 text-sm font-semibold transition ${active ? 'bg-store-ink text-store-cream' : 'bg-white text-store-ink ring-1 ring-store-line hover:ring-store-ink/40'}`
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-rose-50 pb-28">
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <div className="text-center mb-6">
-          {business.photo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={business.photo} alt={business.name} className="w-20 h-20 rounded-full object-cover mx-auto mb-3 shadow-md border-2 border-white" />
-          ) : (
-            <div className="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ backgroundColor: '#F15A24' }}>
-              <ShoppingBag className="w-8 h-8 text-white" />
+    <div className="flex min-h-screen flex-col bg-store-cream text-store-ink">
+      {header}
+
+      <main className="flex-1 pb-28">
+        {/* Hero */}
+        <section className="relative overflow-hidden bg-store-night text-store-cream">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full opacity-30 blur-3xl"
+            style={{ background: 'radial-gradient(circle, #C9A46A 0%, transparent 65%)' }}
+          />
+          <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-20">
+            <div className="flex flex-col items-start gap-5">
+              {business.photo && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={business.photo} alt={`${business.name} logo`} className="h-16 w-16 rounded-full object-cover ring-2 ring-store-gold/50 md:h-20 md:w-20" />
+              )}
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-store-gold">{eyebrow}</p>
+              <h1 className="font-display text-5xl font-semibold leading-[1.05] tracking-wide md:text-7xl">{business.name}</h1>
+              {business.shop_description && (
+                <p className="max-w-md text-base leading-relaxed text-store-cream/75 md:text-lg">{business.shop_description}</p>
+              )}
+              <div className="mt-2 flex flex-wrap gap-3">
+                <a href="#collection" className="inline-flex items-center rounded-full bg-store-gold px-6 py-3 font-semibold text-store-night hover:bg-[#d8b47c]">Shop the collection</a>
+                {chatLink && (
+                  <a href={chatLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center rounded-full border border-store-cream/30 px-6 py-3 font-semibold text-store-cream hover:bg-white/10">
+                    Chat on WhatsApp
+                  </a>
+                )}
+              </div>
+              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-xs font-semibold text-store-cream/60">
+                <li>✦ No app or login</li>
+                {business.upi_id && <li>✦ Pay easily by UPI</li>}
+                {chatLink && <li>✦ Help on WhatsApp</li>}
+              </ul>
             </div>
-          )}
-          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">{business.name}</h1>
-          {business.shop_description && <p className="text-gray-600 mt-1">{business.shop_description}</p>}
-          {business.address && (
-            <p className="flex items-center justify-center gap-1 text-gray-500 text-sm mt-1">
-              <MapPin className="w-3.5 h-3.5 shrink-0" />{business.address}
-            </p>
-          )}
-        </div>
 
-        <div className="flex gap-2 mb-4">
-        {items.length > 6 && (
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search items…"
-              className="w-full h-11 pl-10 pr-4 rounded-2xl border-2 border-gray-200 bg-white focus:border-[#F15A24] outline-none text-sm"
-            />
-          </div>
-        )}
-        {items.length > 1 && (
-          <select
-            value={sort}
-            onChange={e => setSort(e.target.value as typeof sort)}
-            aria-label="Sort items"
-            className={`h-11 rounded-2xl border-2 border-gray-200 bg-white px-3 text-sm outline-none focus:border-[#F15A24] ${items.length > 6 ? '' : 'ml-auto'}`}
-          >
-            <option value="new">Newest first</option>
-            <option value="low">Price: low to high</option>
-            <option value="high">Price: high to low</option>
-            <option value="name">Name</option>
-          </select>
-        )}
-        </div>
-
-        {categories.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-4 px-4">
-            {[{ id: 'all', name: 'All' }, ...categories].map(c => (
-              <button
-                key={c.id}
-                onClick={() => setCategory(c.id)}
-                className={`shrink-0 px-4 h-9 rounded-full text-sm font-medium border-2 transition-colors ${
-                  category === c.id ? 'text-white border-transparent' : 'bg-white text-gray-700 border-gray-200'
-                }`}
-                style={category === c.id ? { backgroundColor: '#F15A24' } : undefined}
-              >
-                {c.name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {items.length === 0 && <p className="text-center text-gray-500 bg-white rounded-2xl p-8">No items to show yet.</p>}
-        {items.length > 0 && filtered.length === 0 && <p className="text-center text-gray-500 py-8">No items match “{search}”.</p>}
-
-        {groups.map(group => (
-        <section key={group.id} className="mb-6">
-        {group.name && <h2 className="text-lg font-bold text-gray-900 mb-3">{group.name}</h2>}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {group.items.map(item => {
-            const left = item.stock
-            return (
-              <div key={item.id} onClick={() => setDetail(item)} className={`bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer flex flex-col ${item.stock != null && item.stock <= 0 ? 'opacity-60 grayscale' : ''}`}>
-                <div className="relative">
-                  <Photo item={item} className="w-full aspect-square" />
-                  <Tags item={item} />
-                </div>
-                <div className="p-3 flex-1 flex flex-col gap-2">
-                  <p className="text-sm font-medium text-gray-900 line-clamp-2">{item.name}</p>
-                  <div className="mt-auto flex items-center justify-between gap-2">
-                    <div>
-                      <Price item={item} />
-                      {left != null && left > 0 && left <= 5 && <p className="text-[11px] text-amber-600 font-medium">Only {left} left</p>}
-                    </div>
-                    <QtyControl item={item} q={cart[item.id] ?? 0} setQty={setQty} />
+            {heroPhotos.length > 0 && (
+              <div className={`grid h-72 gap-3 sm:h-96 md:h-[460px] ${heroPhotos.length >= 3 ? 'grid-cols-2 grid-rows-2' : heroPhotos.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {heroPhotos.map((p, i) => (
+                  <div key={p.url} className={`overflow-hidden rounded-3xl bg-store-ink ring-1 ring-white/10 ${heroPhotos.length >= 3 && i === 0 ? 'row-span-2' : ''}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={p.url} alt={p.name} className="h-full w-full object-cover" />
                   </div>
-                </div>
+                ))}
               </div>
-            )
-          })}
-        </div>
-        </section>
-        ))}
-      </div>
-
-      {/* Item detail */}
-      {detail && (
-        <div className="fixed inset-0 z-40 bg-black/40 flex items-end sm:items-center justify-center" onClick={() => setDetail(null)}>
-          <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="relative">
-              <Gallery key={detail.id} item={detail} />
-              <button onClick={() => setDetail(null)} className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 flex items-center justify-center" aria-label="Close">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-5 space-y-3">
-              <h2 className="text-xl font-bold text-gray-900">{detail.name}</h2>
-              {detail.code && <p className="text-xs text-gray-400">Code {detail.code}</p>}
-              {detail.description && <p className="text-sm text-gray-600 whitespace-pre-line">{detail.description}</p>}
-              <div className="flex items-center justify-between pt-2">
-                <Price item={detail} large />
-                <QtyControl item={detail} q={cart[detail.id] ?? 0} setQty={setQty} />
-              </div>
-            </div>
+            )}
           </div>
-        </div>
+        </section>
+
+        {/* Collection */}
+        <section id="collection" className="mx-auto flex max-w-6xl scroll-mt-20 flex-col gap-6 px-4 py-10 sm:px-6">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-store-golddark">Shop</p>
+              <h2 className="font-display text-4xl font-semibold md:text-5xl">The Collection</h2>
+            </div>
+            <p className="text-sm text-store-ink/60">{shown.length} {shown.length === 1 ? 'piece' : 'pieces'}</p>
+          </div>
+
+          {categories.length > 0 && (
+            <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0" aria-label="Categories">
+              <button onClick={() => setCategory('all')} className={chip(category === 'all')}>All</button>
+              {categories.map(c => (
+                <button key={c.id} onClick={() => setCategory(c.id)} className={chip(category === c.id)}>{c.name}</button>
+              ))}
+            </nav>
+          )}
+
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-store-ink/40" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or code" aria-label="Search items" className={`${inputClass} pl-10`} />
+            </div>
+            <select value={sort} onChange={e => setSort(e.target.value as typeof sort)} aria-label="Sort items" className="h-12 rounded-full border border-store-line bg-white px-4 text-sm outline-none focus:border-store-gold">
+              <option value="new">Newest</option>
+              <option value="low">Price: low to high</option>
+              <option value="high">Price: high to low</option>
+              <option value="name">Name</option>
+            </select>
+          </div>
+
+          {items.length === 0 ? (
+            <p className="py-16 text-center text-store-ink/60">No pieces to show yet.</p>
+          ) : shown.length === 0 ? (
+            <p className="py-16 text-center text-store-ink/60">No pieces found.</p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {shown.map(item => {
+                const inBag = cart[item.id] ?? 0
+                const soldOut = item.stock != null && item.stock <= 0
+                const maxed = inBag >= maxQty(item)
+                const photos = photosOf(item)
+                const tags = itemTags(item.tags)
+                const off = item.mrp_paise && item.mrp_paise > item.price_paise
+                  ? Math.round(((item.mrp_paise - item.price_paise) / item.mrp_paise) * 100)
+                  : 0
+                const desc = item.description ?? ''
+                const long = desc.length > 140 || desc.split('\n').length > 3
+                const showAll = expanded[item.id]
+                const ask = waLink(business.phone, `Hi, I'm interested in ${item.name}${item.code ? ` (${item.code})` : ''}. Is it available?`)
+                return (
+                  <article
+                    key={item.id}
+                    id={`item-${item.id}`}
+                    className={`flex gap-4 rounded-3xl border bg-white p-3 sm:p-4 ${linkedItem?.id === item.id ? 'border-store-gold ring-2 ring-store-gold/40' : 'border-store-line'}`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => photos.length && setViewer({ item, index: 0 })}
+                      className="relative h-36 w-28 shrink-0 overflow-hidden rounded-2xl bg-store-sand sm:h-44 sm:w-36"
+                      aria-label={photos.length ? `View photos of ${item.name}` : `${item.name}, no photo`}
+                    >
+                      {photos[0] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={photos[0]} alt={item.name} loading="lazy" className={`h-full w-full object-cover ${soldOut ? 'opacity-50 grayscale' : ''}`} />
+                      ) : (
+                        <span className="flex h-full items-center justify-center text-xs text-store-ink/40">No photo</span>
+                      )}
+                      {photos.length > 1 && (
+                        <span className="absolute bottom-2 right-2 rounded-full bg-store-night/75 px-2 py-0.5 text-[11px] font-bold text-store-cream">1/{photos.length}</span>
+                      )}
+                      {photos.length > 0 && (
+                        <span className="absolute left-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/85 text-store-ink shadow-sm" aria-hidden="true">
+                          <Maximize2 className="h-3.5 w-3.5" />
+                        </span>
+                      )}
+                    </button>
+
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1">
+                        {item.code && <span className="mr-1 text-[11px] font-bold uppercase tracking-[0.2em] text-store-golddark">{item.code}</span>}
+                        {soldOut ? (
+                          <span className="rounded-full bg-store-ink px-2.5 py-1 text-xs font-bold text-store-cream">Sold out</span>
+                        ) : (
+                          tags.map(t => <span key={t.key} className={`rounded-full px-2.5 py-1 text-xs font-bold ${t.style}`}>{t.label}</span>)
+                        )}
+                      </div>
+                      <h3 className="font-display text-2xl font-semibold leading-tight">{item.name}</h3>
+                      <div className="flex flex-wrap items-baseline gap-2">
+                        <span className="text-lg font-bold">{formatRupees(item.price_paise)}</span>
+                        {off > 0 && (
+                          <>
+                            <span className="text-sm text-store-ink/50 line-through">{formatRupees(item.mrp_paise)}</span>
+                            <span className="text-xs font-bold text-green-700">{off}% off</span>
+                          </>
+                        )}
+                        {!soldOut && item.stock != null && item.stock <= 2 && (
+                          <span className="text-xs font-bold text-amber-800">Only {item.stock} left</span>
+                        )}
+                      </div>
+
+                      {desc && (
+                        <div className="text-sm leading-relaxed text-store-ink/75">
+                          <p className={`whitespace-pre-line ${long && !showAll ? 'line-clamp-3' : ''}`}>{desc}</p>
+                          {long && (
+                            <button
+                              type="button"
+                              onClick={() => setExpanded(e => ({ ...e, [item.id]: !showAll }))}
+                              aria-expanded={!!showAll}
+                              className="mt-0.5 text-xs font-bold text-store-golddark underline"
+                            >
+                              {showAll ? 'Show less' : 'Read more'}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="mt-auto flex items-center gap-2 pt-2">
+                        {!soldOut && (
+                          <button
+                            type="button"
+                            onClick={() => addToBag(item)}
+                            disabled={maxed}
+                            className={`flex h-10 flex-1 items-center justify-center rounded-full px-4 text-sm font-bold transition disabled:opacity-50 sm:flex-none ${justAdded === item.id ? 'bg-store-gold text-store-night' : 'bg-store-ink text-store-cream hover:bg-black'}`}
+                          >
+                            {justAdded === item.id ? 'Added ✓' : maxed ? 'All in bag' : inBag ? `Add more (${inBag} in bag)` : 'Add to bag'}
+                          </button>
+                        )}
+                        {ask && (
+                          <a href={ask} target="_blank" rel="noopener noreferrer" aria-label={`Ask about ${item.name} on WhatsApp`} className="flex h-10 items-center justify-center rounded-full border border-store-line px-4 text-sm font-semibold hover:bg-store-sand">
+                            Ask
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          )}
+        </section>
+      </main>
+
+      {footer}
+
+      {count > 0 && (
+        <button
+          onClick={() => { setView('bag'); window.scrollTo(0, 0) }}
+          className="fixed bottom-4 left-1/2 z-30 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center justify-between rounded-full bg-store-ink px-6 py-4 text-store-cream shadow-2xl hover:bg-black"
+        >
+          <span className="text-sm font-semibold">{count} {count === 1 ? 'piece' : 'pieces'} · {formatRupees(subtotal)}</span>
+          <span className="font-bold text-store-gold">View bag →</span>
+        </button>
       )}
 
-      {/* Cart bar */}
-      {count > 0 && (
-        <div className="fixed bottom-0 inset-x-0 z-30 p-4">
-          <button
-            onClick={() => { setView('cart'); window.scrollTo(0, 0) }}
-            className="max-w-lg mx-auto w-full h-14 rounded-2xl text-white font-bold shadow-lg flex items-center justify-between px-5"
-            style={{ backgroundColor: '#F15A24' }}
-          >
-            <span className="flex items-center gap-2"><ShoppingBag className="w-5 h-5" /> {count} item{count === 1 ? '' : 's'}</span>
-            <span>{formatRupees(total)} · View order →</span>
-          </button>
-        </div>
+      {viewer && (
+        <PhotoViewer photos={photosOf(viewer.item)} start={viewer.index} title={viewer.item.name} onClose={() => setViewer(null)} />
       )}
     </div>
   )

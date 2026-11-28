@@ -42,8 +42,7 @@ export default function UpiPay({
     <div className="space-y-3 text-center">
       <a
         href={link}
-        className="flex w-full h-12 items-center justify-center rounded-2xl text-white font-semibold"
-        style={{ backgroundColor: '#F15A24' }}
+        className="flex w-full h-12 items-center justify-center rounded-full bg-store-gold text-store-night font-semibold hover:bg-[#d8b47c]"
       >
         Pay {formatRupees(amountPaise)} by UPI
       </a>
@@ -59,7 +58,7 @@ export default function UpiPay({
         <button
           type="button"
           onClick={() => { navigator.clipboard?.writeText(upiId); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-          className="text-xs font-medium text-[#F15A24] hover:underline"
+          className="text-xs font-semibold text-store-golddark hover:underline"
         >
           {copied ? 'Copied' : 'Copy'}
         </button>
