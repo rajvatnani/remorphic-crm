@@ -19,7 +19,9 @@ export default function ItemList({
   businessId,
   defaultLowStock,
   shopPath,
+  aiReady = false,
 }: {
+  aiReady?: boolean
   items: Item[]
   categories: ItemCategory[]
   businessId: string
@@ -228,6 +230,7 @@ export default function ItemList({
           businessId={businessId}
           categories={categories}
           defaultLowStock={defaultLowStock}
+          aiReady={aiReady}
           onClose={() => { setAdding(false); setEditing(null); setDuplicating(null) }}
         />
       )}

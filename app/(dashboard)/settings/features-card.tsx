@@ -38,6 +38,8 @@ export default function FeaturesCard({
   const [codePrefix, setCodePrefix] = useState('IT')
   const [defaultLow, setDefaultLow] = useState('2')
   const [itemSaved, setItemSaved] = useState(false)
+  const [aiText, setAiText] = useState('')
+  const [aiSaved, setAiSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -53,6 +55,7 @@ export default function FeaturesCard({
       setAlertEmail(data.order_alert_email ?? '')
       if (data.item_code_prefix) setCodePrefix(data.item_code_prefix)
       if (data.default_low_stock != null) setDefaultLow(String(data.default_low_stock))
+      setAiText(data.ai_instructions ?? '')
     })
     createClient().auth.getUser().then(({ data }) => setLoginEmail(data.user?.email ?? ''))
     canSendEmail().then(setEmailReady)
@@ -134,6 +137,26 @@ export default function FeaturesCard({
       setCodePrefix(prefix)
       setItemSaved(true)
       router.refresh()
+    })
+  }
+
+  function saveAiInstructions(e: React.FormEvent) {
+    e.preventDefault()
+    if (!businessId) return
+    setError(null)
+    setAiSaved(false)
+    startTransition(async () => {
+      const { error } = await createClient()
+        .from('businesses')
+        .update({ ai_instructions: aiText.trim().slice(0, 2000) || null })
+        .eq('id', businessId)
+      if (error) {
+        setError(error.message.includes('column')
+          ? 'AI instructions cannot be saved until the database update for them has been run.'
+          : error.message)
+        return
+      }
+      setAiSaved(true)
     })
   }
 
@@ -247,6 +270,24 @@ export default function FeaturesCard({
                   Save item settings
                 </button>
                 {itemSaved && <span className="text-xs text-green-600">Saved</span>}
+              </div>
+            </form>
+            <form onSubmit={saveAiInstructions} className="space-y-2 pt-2">
+              <span className="block text-sm font-medium text-gray-900">AI writing instructions</span>
+              <span className="block text-xs text-gray-500">Used each time you tap &ldquo;Fill details from photo with AI&rdquo; on an item.</span>
+              <textarea
+                value={aiText}
+                onChange={e => { setAiText(e.target.value); setAiSaved(false) }}
+                rows={4}
+                maxLength={2000}
+                placeholder={'Examples:\n- Write in Hinglish, warm and short.\n- Always mention "German silver, anti-tarnish coated".\n- Put the size in the name, like "Lakshmi Ji Idol – Small".\n- End with a gifting idea for weddings or Diwali.'}
+                className="w-full rounded-lg border border-input px-2.5 py-1.5 text-sm outline-none"
+              />
+              <div className="flex items-center gap-3">
+                <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#F15A24' }}>
+                  Save AI instructions
+                </button>
+                {aiSaved && <span className="text-xs text-green-600">Saved</span>}
               </div>
             </form>
             <form onSubmit={saveAlertEmail} className="space-y-2 pt-2">

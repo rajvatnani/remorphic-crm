@@ -22,6 +22,7 @@ export default async function ItemsPage() {
       businessId={business.id}
       defaultLowStock={business.default_low_stock ?? 2}
       shopPath={business.shop_enabled ? `/shop/${business.slug}` : null}
+      aiReady={Boolean(process.env.ANTHROPIC_API_KEY)}
     />
   )
 }
