@@ -23,5 +23,5 @@ export default async function ShopPage({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   const data = await getShopData(slug)
   if (!data) return notFound()
-  return <ShopView business={data.business} items={data.items} />
+  return <ShopView business={data.business} items={data.items} categories={data.categories} />
 }

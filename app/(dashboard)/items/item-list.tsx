@@ -6,7 +6,8 @@ import { saveItem, deleteItem, type ItemInput } from '@/app/actions/orders'
 import { formatRupees, toRupeesInput } from '@/lib/money'
 import { compressImage } from '@/lib/image'
 import { createClient } from '@/lib/supabase/client'
-import type { Item } from '@/types'
+import type { Item, ItemCategory } from '@/types'
+import CategoriesDialog from './categories-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -14,9 +15,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, Search, ImagePlus, Package } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, ImagePlus, Package, Tags } from 'lucide-react'
 
-function ItemDialog({ item, open, onClose, businessId }: { item: Item | null; open: boolean; onClose: () => void; businessId: string }) {
+function ItemDialog({ item, open, onClose, businessId, categories }: { item: Item | null; open: boolean; onClose: () => void; businessId: string; categories: ItemCategory[] }) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -55,6 +56,7 @@ function ItemDialog({ item, open, onClose, businessId }: { item: Item | null; op
       stock: String(f.get('stock') ?? ''),
       active: f.get('active') === 'on',
       photo_url: photo,
+      category_id: String(f.get('category_id') ?? '') || null,
     }
     setError(null)
     startTransition(async () => {
@@ -101,6 +103,20 @@ function ItemDialog({ item, open, onClose, businessId }: { item: Item | null; op
               <Input id="item_code" name="code" defaultValue={item?.code ?? ''} placeholder="GS-101" />
             </div>
           </div>
+          {categories.length > 0 && (
+            <div className="space-y-1.5">
+              <Label htmlFor="item_category">Category</Label>
+              <select
+                id="item_category"
+                name="category_id"
+                defaultValue={item?.category_id ?? ''}
+                className="w-full h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none"
+              >
+                <option value="">No category</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="item_price">Selling price ₹</Label>
@@ -136,7 +152,21 @@ function ItemDialog({ item, open, onClose, businessId }: { item: Item | null; op
   )
 }
 
-export default function ItemList({ items, businessId }: { items: Item[]; businessId: string }) {
+export default function ItemList({
+  items,
+  categories,
+  businessId,
+}: {
+  items: Item[]
+  categories: ItemCategory[]
+  businessId: string
+}) {
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [managing, setManaging] = useState(false)
+  const categoryName = Object.fromEntries(categories.map(c => [c.id, c.name]))
+  const itemCounts: Record<string, number> = {}
+  for (const i of items) if (i.category_id) itemCounts[i.category_id] = (itemCounts[i.category_id] ?? 0) + 1
+
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [editing, setEditing] = useState<Item | null>(null)
@@ -144,9 +174,12 @@ export default function ItemList({ items, businessId }: { items: Item[]; busines
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
-    if (!q) return items
-    return items.filter(i => i.name.toLowerCase().includes(q) || (i.code ?? '').toLowerCase().includes(q))
-  }, [items, search])
+    return items.filter(i => {
+      if (categoryFilter === 'none' && i.category_id) return false
+      if (categoryFilter !== 'all' && categoryFilter !== 'none' && i.category_id !== categoryFilter) return false
+      return !q || i.name.toLowerCase().includes(q) || (i.code ?? '').toLowerCase().includes(q)
+    })
+  }, [items, search, categoryFilter])
 
   async function handleDelete(item: Item) {
     if (!window.confirm(`Delete ${item.name}? Past orders keep their copy of it.`)) return
@@ -162,12 +195,18 @@ export default function ItemList({ items, businessId }: { items: Item[]; busines
           <h1 className="font-heading text-4xl font-extrabold text-gray-900 tracking-tight">Items</h1>
           <p className="text-sm text-gray-500 mt-1">{items.length} total</p>
         </div>
-        <Button onClick={() => setAdding(true)} className="bg-[#F15A24] hover:bg-[#d44d1b] text-white gap-2">
-          <Plus className="h-4 w-4" /> Add Item
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setManaging(true)} className="gap-2">
+            <Tags className="h-4 w-4" /> Categories
+          </Button>
+          <Button onClick={() => setAdding(true)} className="bg-[#F15A24] hover:bg-[#d44d1b] text-white gap-2">
+            <Plus className="h-4 w-4" /> Add Item
+          </Button>
+        </div>
       </div>
 
-      <div className="relative max-w-sm mb-4">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <div className="relative max-w-sm flex-1 min-w-48">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
         <input
           type="text"
@@ -177,6 +216,18 @@ export default function ItemList({ items, businessId }: { items: Item[]; busines
           className="w-full h-9 pl-9 pr-3 rounded-lg border border-input bg-transparent text-sm outline-none focus-visible:border-ring"
         />
       </div>
+      {categories.length > 0 && (
+        <select
+          value={categoryFilter}
+          onChange={e => setCategoryFilter(e.target.value)}
+          className="h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none"
+        >
+          <option value="all">All categories</option>
+          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          <option value="none">No category</option>
+        </select>
+      )}
+      </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <Table>
@@ -184,6 +235,7 @@ export default function ItemList({ items, businessId }: { items: Item[]; busines
             <TableRow className="bg-gray-50 hover:bg-gray-50">
               <TableHead>Name</TableHead>
               <TableHead>Code</TableHead>
+              <TableHead>Category</TableHead>
               <TableHead className="text-right">Price</TableHead>
               <TableHead className="text-right">Cost</TableHead>
               <TableHead className="text-right">In stock</TableHead>
@@ -193,8 +245,8 @@ export default function ItemList({ items, businessId }: { items: Item[]; busines
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-gray-400">
-                  {items.length === 0 ? 'No items yet. Add what you sell.' : `No items match "${search}".`}
+                <TableCell colSpan={7} className="text-center py-12 text-gray-400">
+                  {items.length === 0 ? 'No items yet. Add what you sell.' : 'No items match.'}
                 </TableCell>
               </TableRow>
             )}
@@ -213,6 +265,7 @@ export default function ItemList({ items, businessId }: { items: Item[]; busines
                   </div>
                 </TableCell>
                 <TableCell className="text-gray-500">{item.code || '—'}</TableCell>
+                <TableCell className="text-gray-500">{(item.category_id && categoryName[item.category_id]) || '—'}</TableCell>
                 <TableCell className="text-right">{formatRupees(item.price_paise)}</TableCell>
                 <TableCell className="text-right text-gray-500">{item.cost_paise != null ? formatRupees(item.cost_paise) : '—'}</TableCell>
                 <TableCell className={`text-right ${item.stock != null && item.stock <= 0 ? 'text-red-600 font-medium' : ''}`}>
@@ -240,7 +293,16 @@ export default function ItemList({ items, businessId }: { items: Item[]; busines
           item={editing}
           open
           businessId={businessId}
+          categories={categories}
           onClose={() => { setAdding(false); setEditing(null) }}
+        />
+      )}
+      {managing && (
+        <CategoriesDialog
+          key={categories.map(c => c.id + c.name).join()}
+          categories={categories}
+          itemCounts={itemCounts}
+          onClose={() => setManaging(false)}
         />
       )}
     </div>

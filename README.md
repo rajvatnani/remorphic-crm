@@ -78,6 +78,7 @@ SQL files in [`supabase/`](supabase) are run by hand in the Supabase SQL Editor.
 14. `booking_without_code_migration.sql`
 15. `orders_migration.sql`
 16. `shop_migration.sql`
+17. `categories_invoice_migration.sql`
 
 When code needs a database change, add a new file and note here where it goes in the order. Run it in Supabase **before** merging the code that depends on it.
 
@@ -90,6 +91,8 @@ Rules to keep:
 - **Orders are written only through functions:** members can read `orders` and `order_items`, but every change goes through `create_order`, `update_order`, `set_order_status` and `set_order_payment`, which keep order numbers, totals and stock in step. Stock is taken when an order is confirmed and returned when it is cancelled. Money is stored in paise.
 - **Features:** `businesses.leads_enabled`, `appointments_enabled`, `visits_enabled` and `orders_enabled` switch parts of the app on and off (Settings → Features). Orders start off.
 - **Shop link:** `/shop/<slug>` shows a business's items on sale when both `orders_enabled` and `shop_enabled` are on. Customers order without logging in through `place_shop_order` (service role only), which checks stock and limits orders per number, connection and business. Their mobile number (last 10 digits) finds or creates the customer. Stock is taken only when the business confirms. Each order has a private page at `/shop/<slug>/order/<public_token>`. Item photos go in the `business-photos` bucket under `<business id>/items/`.
+- **Invoices:** `/invoice/<order public_token>` is built from the order each time it is opened, for confirmed, ready and delivered orders only. It prints the business's `gstin` and `invoice_note` if set. Nothing is stored.
+- **Categories:** `item_categories` belong to one business; a trigger stops an item using another business's category. Deleting a category keeps its items.
 - **Customers without a phone:** online bookings may leave the phone blank, stored as `''`. `sendWhatsApp` skips those, so code that messages customers must keep going through it.
 
 ### Not yet in this repository

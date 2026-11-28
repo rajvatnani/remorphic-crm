@@ -29,6 +29,12 @@ export interface ShopItem {
   price_paise: number
   stock: number | null
   photo_url: string | null
+  category_id: string | null
+}
+
+export interface ShopCategory {
+  id: string
+  name: string
 }
 
 export interface ShopBusiness {
@@ -41,7 +47,7 @@ export interface ShopBusiness {
   payment_qr: string | null
 }
 
-export async function getShopData(slug: string): Promise<{ business: ShopBusiness; items: ShopItem[] } | null> {
+export async function getShopData(slug: string): Promise<{ business: ShopBusiness; items: ShopItem[]; categories: ShopCategory[] } | null> {
   const admin = adminClient()
   const { data: business } = await admin
     .from('businesses')
@@ -50,16 +56,30 @@ export async function getShopData(slug: string): Promise<{ business: ShopBusines
     .maybeSingle()
   if (!business || !business.orders_enabled || !business.shop_enabled) return null
 
-  const { data: items } = await admin
-    .from('items')
-    .select('id, name, code, description, price_paise, stock, photo_url')
-    .eq('business_id', business.id)
-    .eq('active', true)
-    .order('name')
+  const [{ data: items }, { data: categories }] = await Promise.all([
+    admin
+      .from('items')
+      .select('id, name, code, description, price_paise, stock, photo_url, category_id')
+      .eq('business_id', business.id)
+      .eq('active', true)
+      .order('name'),
+    admin
+      .from('item_categories')
+      .select('id, name')
+      .eq('business_id', business.id)
+      .order('position')
+      .order('name'),
+  ])
 
   const { orders_enabled: _o, shop_enabled: _s, ...pub } = business
   void _o; void _s
-  return { business: pub as ShopBusiness, items: (items ?? []) as ShopItem[] }
+  const list = (items ?? []) as ShopItem[]
+  return {
+    business: pub as ShopBusiness,
+    items: list,
+    // Only categories that have something on sale
+    categories: ((categories ?? []) as ShopCategory[]).filter(c => list.some(i => i.category_id === c.id)),
+  }
 }
 
 function keyedHash(value: string) {
@@ -205,5 +225,51 @@ export async function getShopOrder(slug: string, token: string): Promise<ShopOrd
     customer_name: customer?.name ?? '',
     lines: order.order_items as ShopOrderView['lines'],
     business: business as ShopBusiness,
+  }
+}
+
+export interface InvoiceView {
+  order_no: number
+  status: string
+  created_at: string
+  delivered_at: string | null
+  payment_status: string
+  paid_paise: number
+  delivery_paise: number
+  discount_paise: number
+  address: string | null
+  customer: { name: string; phone: string }
+  lines: { name: string; qty: number; price_paise: number }[]
+  business: { name: string; address: string | null; phone: string | null; photo: string | null; gstin: string | null; invoice_note: string | null; payment_qr: string | null }
+}
+
+/**
+ * Invoice for an order, by its unguessable token. Built from the order each
+ * time it is opened; only confirmed, ready or delivered orders have one.
+ */
+export async function getInvoice(token: string): Promise<InvoiceView | null> {
+  if (!TOKEN_RE.test(String(token))) return null
+  const admin = adminClient()
+  const { data: order } = await admin
+    .from('orders')
+    .select('order_no, status, created_at, delivered_at, payment_status, paid_paise, delivery_paise, discount_paise, address, business_id, customers(name, phone), order_items(name, qty, price_paise)')
+    .eq('public_token', token)
+    .maybeSingle()
+  if (!order || !['confirmed', 'ready', 'delivered'].includes(order.status)) return null
+
+  const { data: business } = await admin
+    .from('businesses')
+    .select('name, address, phone, photo, gstin, invoice_note, payment_qr')
+    .eq('id', order.business_id)
+    .single()
+  if (!business) return null
+
+  const { business_id: _b, customers, order_items, ...rest } = order
+  void _b
+  return {
+    ...rest,
+    customer: (customers as unknown as { name: string; phone: string } | null) ?? { name: '', phone: '' },
+    lines: order_items as InvoiceView['lines'],
+    business,
   }
 }

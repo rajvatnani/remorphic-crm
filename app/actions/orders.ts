@@ -18,6 +18,7 @@ async function getBusiness() {
 function refresh() {
   revalidatePath('/orders')
   revalidatePath('/items')
+  revalidatePath('/shop/[slug]', 'page')
   revalidatePath('/customers', 'layout')
 }
 
@@ -32,6 +33,7 @@ export interface ItemInput {
   stock?: string
   active: boolean
   photo_url?: string | null
+  category_id?: string | null
 }
 
 // Only photos uploaded to this project's business-photos bucket
@@ -61,6 +63,7 @@ function cleanItem(input: ItemInput) {
       stock,
       active: Boolean(input.active),
       photo_url: cleanPhotoUrl(input.photo_url),
+      category_id: input.category_id || null,
     },
   }
 }
@@ -84,6 +87,50 @@ export async function deleteItem(itemId: string): Promise<Result> {
   // Past orders keep their own copy of the name and price
   const { error } = await supabase.from('items').delete().eq('id', itemId)
   if (error) return { ok: false, error: error.message }
+  refresh()
+  return { ok: true }
+}
+
+// ─── categories ───────────────────────────────────────────────────────────────
+
+export async function saveCategory(categoryId: string | null, name: string): Promise<Result> {
+  const clean = String(name ?? '').replace(/\s+/g, ' ').trim().slice(0, 60)
+  if (!clean) return { ok: false, error: 'Enter a category name.' }
+  const { supabase, business } = await getBusiness()
+
+  let error
+  if (categoryId) {
+    ({ error } = await supabase.from('item_categories').update({ name: clean }).eq('id', categoryId))
+  } else {
+    const { data: last } = await supabase
+      .from('item_categories').select('position').eq('business_id', business.id)
+      .order('position', { ascending: false }).limit(1).maybeSingle()
+    ;({ error } = await supabase.from('item_categories')
+      .insert({ business_id: business.id, name: clean, position: (last?.position ?? -1) + 1 }))
+  }
+  if (error) {
+    return { ok: false, error: error.code === '23505' ? 'You already have a category with that name.' : error.message }
+  }
+  refresh()
+  return { ok: true }
+}
+
+export async function deleteCategory(categoryId: string): Promise<Result> {
+  const { supabase } = await getBusiness()
+  // Its items stay, without a category
+  const { error } = await supabase.from('item_categories').delete().eq('id', categoryId)
+  if (error) return { ok: false, error: error.message }
+  refresh()
+  return { ok: true }
+}
+
+/** Saves the order categories are shown in (ids, first to last) */
+export async function reorderCategories(ids: string[]): Promise<Result> {
+  const { supabase } = await getBusiness()
+  for (const [position, id] of ids.entries()) {
+    const { error } = await supabase.from('item_categories').update({ position }).eq('id', id)
+    if (error) return { ok: false, error: error.message }
+  }
   refresh()
   return { ok: true }
 }

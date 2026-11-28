@@ -14,6 +14,9 @@ export default function FeaturesCard() {
   const [shopOn, setShopOn] = useState(false)
   const [slug, setSlug] = useState('')
   const [copied, setCopied] = useState(false)
+  const [gstin, setGstin] = useState('')
+  const [invoiceNote, setInvoiceNote] = useState('')
+  const [invoiceSaved, setInvoiceSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -24,6 +27,8 @@ export default function FeaturesCard() {
       setOn(enabledModules(data))
       setShopOn(data.shop_enabled === true)
       setSlug(data.slug ?? '')
+      setGstin(data.gstin ?? '')
+      setInvoiceNote(data.invoice_note ?? '')
     })
   }, [])
 
@@ -57,6 +62,26 @@ export default function FeaturesCard() {
           ? 'The shop link cannot be switched on until the database update for the shop has been run.'
           : error.message)
       }
+    })
+  }
+
+  function saveInvoiceDetails(e: React.FormEvent) {
+    e.preventDefault()
+    if (!businessId) return
+    setError(null)
+    setInvoiceSaved(false)
+    startTransition(async () => {
+      const { error } = await createClient()
+        .from('businesses')
+        .update({ gstin: gstin.trim().toUpperCase() || null, invoice_note: invoiceNote.trim() || null })
+        .eq('id', businessId)
+      if (error) {
+        setError(error.message.includes('column')
+          ? 'Invoice details cannot be saved until the database update for invoices has been run.'
+          : error.message)
+        return
+      }
+      setInvoiceSaved(true)
     })
   }
 
@@ -115,6 +140,29 @@ export default function FeaturesCard() {
                 <a href={shopUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-gray-600 hover:underline whitespace-nowrap">Open</a>
               </div>
             )}
+            <form onSubmit={saveInvoiceDetails} className="space-y-2 pt-2">
+              <span className="block text-sm font-medium text-gray-900">Invoice details</span>
+              <input
+                value={gstin}
+                onChange={e => { setGstin(e.target.value); setInvoiceSaved(false) }}
+                placeholder="GSTIN (optional)"
+                maxLength={15}
+                className="w-full h-8 rounded-lg border border-input px-2.5 text-sm outline-none uppercase placeholder:normal-case"
+              />
+              <textarea
+                value={invoiceNote}
+                onChange={e => { setInvoiceNote(e.target.value); setInvoiceSaved(false) }}
+                placeholder="Note at the bottom of every invoice, e.g. exchange within 7 days"
+                rows={2}
+                className="w-full rounded-lg border border-input px-2.5 py-1.5 text-sm outline-none"
+              />
+              <div className="flex items-center gap-3">
+                <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#F15A24' }}>
+                  Save invoice details
+                </button>
+                {invoiceSaved && <span className="text-xs text-green-600">Saved</span>}
+              </div>
+            </form>
           </div>
         )}
         {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
