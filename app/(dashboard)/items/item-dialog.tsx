@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveItem, type ItemInput } from '@/app/actions/orders'
+import { describeItemFromPhoto } from '@/app/actions/ai'
 import { toRupeesInput } from '@/lib/money'
 import { compressImage } from '@/lib/image'
 import { createClient } from '@/lib/supabase/client'
@@ -13,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, X, Star } from 'lucide-react'
+import { Plus, X, Star, Sparkles } from 'lucide-react'
 
 const MAX_PHOTOS = 5
 
@@ -28,7 +29,10 @@ export default function ItemDialog({
   businessId,
   categories,
   defaultLowStock,
+  aiReady = false,
 }: {
+  /** ANTHROPIC_API_KEY is set on the server */
+  aiReady?: boolean
   item: Item | null
   duplicate?: boolean
   onClose: () => void
@@ -45,6 +49,35 @@ export default function ItemDialog({
   )
   const [tags, setTags] = useState<string[]>(item?.tags ?? [])
   const [uploading, setUploading] = useState(0)
+  const formRef = useRef<HTMLFormElement>(null)
+  const [aiPending, setAiPending] = useState(false)
+  const [aiNote, setAiNote] = useState<string | null>(null)
+
+  async function fillWithAi() {
+    const form = formRef.current
+    if (!form || !photos[0]) return
+    const field = (name: string) => form.elements.namedItem(name) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null
+    setError(null)
+    setAiNote(null)
+    setAiPending(true)
+    try {
+      const res = await describeItemFromPhoto(photos[0], {
+        name: field('name')?.value,
+        description: field('description')?.value,
+      })
+      if (!res.ok) { setError(res.error); return }
+      const { name, description, category_id, tags: aiTags } = res.data
+      if (field('name')) field('name')!.value = name
+      if (field('description')) field('description')!.value = description
+      if (category_id && field('category_id')) field('category_id')!.value = category_id
+      if (aiTags.length) setTags(t => [...new Set([...t, ...aiTags])])
+      setAiNote('Filled in by AI. Check it before saving.')
+    } catch {
+      setError('AI could not be reached. Please try again.')
+    } finally {
+      setAiPending(false)
+    }
+  }
 
   async function handlePhotos(e: React.ChangeEvent<HTMLInputElement>) {
     const files = [...(e.target.files ?? [])].slice(0, MAX_PHOTOS - photos.length)
@@ -109,7 +142,7 @@ export default function ItemDialog({
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-6 md:grid-cols-[1fr_260px] mt-2">
+        <form ref={formRef} onSubmit={handleSubmit} className="grid gap-6 md:grid-cols-[1fr_260px] mt-2">
           {/* Details */}
           <div className="space-y-4 min-w-0">
             <div className="grid grid-cols-3 gap-3">
@@ -264,6 +297,23 @@ export default function ItemDialog({
                 )}
               </div>
               <p className="text-[11px] text-gray-400">The first photo is the cover. Tap ★ to make another one the cover.</p>
+              <button
+                type="button"
+                onClick={fillWithAi}
+                disabled={!aiReady || !photos.length || aiPending || uploading > 0}
+                className="w-full h-10 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1.5 disabled:opacity-50"
+                style={{ background: 'linear-gradient(90deg, #F15A24, #e0567a)' }}
+              >
+                <Sparkles className="w-4 h-4" /> {aiPending ? 'Writing…' : 'Fill details from photo with AI'}
+              </button>
+              <p className="text-[11px] text-gray-500">
+                {!aiReady
+                  ? 'AI is not set up yet.'
+                  : !photos.length
+                    ? 'Add a photo, then let AI write the name, description, category and tags.'
+                    : 'Uses the cover photo and your AI instructions in Settings.'}
+              </p>
+              {aiNote && <p className="text-[11px] text-green-700 bg-green-50 rounded px-2 py-1">{aiNote}</p>}
             </div>
 
             {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
