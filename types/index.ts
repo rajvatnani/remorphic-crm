@@ -25,6 +25,8 @@ export interface Business {
   gstin?: string | null
   invoice_note?: string | null
   order_alert_email?: string | null
+  item_code_prefix?: string
+  default_low_stock?: number
 }
 
 export interface Customer {
@@ -134,6 +136,12 @@ export interface Item {
   active: boolean
   photo_url?: string | null
   category_id?: string | null
+  mrp_paise?: number | null
+  wholesaler?: string | null
+  low_stock_level?: number | null
+  tags?: string[]
+  photos?: string[]
+  archived?: boolean
   created_at: string
 }
 

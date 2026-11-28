@@ -34,6 +34,9 @@ export default function FeaturesCard({
   const [loginEmail, setLoginEmail] = useState('')
   const [emailReady, setEmailReady] = useState(true)
   const [alertSaved, setAlertSaved] = useState(false)
+  const [codePrefix, setCodePrefix] = useState('IT')
+  const [defaultLow, setDefaultLow] = useState('2')
+  const [itemSaved, setItemSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -47,6 +50,8 @@ export default function FeaturesCard({
       setGstin(data.gstin ?? '')
       setInvoiceNote(data.invoice_note ?? '')
       setAlertEmail(data.order_alert_email ?? '')
+      if (data.item_code_prefix) setCodePrefix(data.item_code_prefix)
+      if (data.default_low_stock != null) setDefaultLow(String(data.default_low_stock))
     })
     createClient().auth.getUser().then(({ data }) => setLoginEmail(data.user?.email ?? ''))
     canSendEmail().then(setEmailReady)
@@ -102,6 +107,32 @@ export default function FeaturesCard({
         return
       }
       setInvoiceSaved(true)
+    })
+  }
+
+  function saveItemSettings(e: React.FormEvent) {
+    e.preventDefault()
+    if (!businessId) return
+    const prefix = codePrefix.trim().toUpperCase()
+    const low = Number.parseInt(defaultLow, 10)
+    if (!/^[A-Z0-9]{1,6}$/.test(prefix)) { setError('The code prefix must be 1 to 6 letters or numbers, e.g. GS.'); return }
+    if (!Number.isFinite(low) || low < 0) { setError('The low-stock alert must be 0 or more.'); return }
+    setError(null)
+    setItemSaved(false)
+    startTransition(async () => {
+      const { error } = await createClient()
+        .from('businesses')
+        .update({ item_code_prefix: prefix, default_low_stock: low })
+        .eq('id', businessId)
+      if (error) {
+        setError(error.message.includes('column')
+          ? 'Item settings cannot be saved until the database update for item details has been run.'
+          : error.message)
+        return
+      }
+      setCodePrefix(prefix)
+      setItemSaved(true)
+      router.refresh()
     })
   }
 
@@ -186,6 +217,36 @@ export default function FeaturesCard({
                 <a href={shopUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-gray-600 hover:underline whitespace-nowrap">Open</a>
               </div>
             )}
+            <form onSubmit={saveItemSettings} className="space-y-2 pt-2">
+              <span className="block text-sm font-medium text-gray-900">Items</span>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="space-y-1">
+                  <span className="block text-xs text-gray-500">Code prefix for new items</span>
+                  <input
+                    value={codePrefix}
+                    onChange={e => { setCodePrefix(e.target.value.toUpperCase()); setItemSaved(false) }}
+                    maxLength={6}
+                    className="w-full h-8 rounded-lg border border-input px-2.5 text-sm outline-none uppercase"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="block text-xs text-gray-500">Default low-stock alert</span>
+                  <input
+                    value={defaultLow}
+                    onChange={e => { setDefaultLow(e.target.value); setItemSaved(false) }}
+                    inputMode="numeric"
+                    className="w-full h-8 rounded-lg border border-input px-2.5 text-sm outline-none"
+                  />
+                </label>
+              </div>
+              <p className="text-[11px] text-gray-400">New items get codes like {codePrefix || 'IT'}-001. An item&apos;s own low-stock alert overrides the default.</p>
+              <div className="flex items-center gap-3">
+                <button type="submit" disabled={pending} className="h-8 px-3 rounded-lg text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: '#F15A24' }}>
+                  Save item settings
+                </button>
+                {itemSaved && <span className="text-xs text-green-600">Saved</span>}
+              </div>
+            </form>
             <form onSubmit={saveAlertEmail} className="space-y-2 pt-2">
               <span className="block text-sm font-medium text-gray-900">Email new shop orders to</span>
               <div className="flex gap-2">

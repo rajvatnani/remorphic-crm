@@ -74,7 +74,7 @@ export default function OrderDialog({
   const [notes, setNotes] = useState(order?.notes ?? '')
   const [dueDate, setDueDate] = useState(order?.due_date ?? '')
 
-  const activeItems = items.filter(i => i.active)
+  const activeItems = items.filter(i => i.active && !i.archived)
   // Item picker grouped by category, in the business's order
   const itemGroups = [
     ...categories.map(c => ({ label: c.name, items: activeItems.filter(i => i.category_id === c.id) })),

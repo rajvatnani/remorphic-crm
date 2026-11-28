@@ -83,6 +83,7 @@ SQL files in [`supabase/`](supabase) are run by hand in the Supabase SQL Editor.
 18. `order_payment_proof_migration.sql`
 19. `stock_log_migration.sql`
 20. `order_email_migration.sql`
+21. `items_details_migration.sql`
 
 When code needs a database change, add a new file and note here where it goes in the order. Run it in Supabase **before** merging the code that depends on it.
 
@@ -101,6 +102,7 @@ Rules to keep:
 - **Stock log:** a trigger on `items` writes a `stock_moves` row for every change to `stock`, so nothing goes unlogged. Functions that change stock say why through the `app.stock_reason`, `app.stock_order` and `app.stock_note` settings (local to the transaction); anything else is logged as `edit`. Members can read the log but not write it. Manual changes go through `adjust_stock`.
 - **Reports** (`/reports`, with Orders on): worked out in `lib/reports.ts` from orders already loaded. Only confirmed, ready and delivered orders count; dates are India time; profit uses lines with a known cost. Running low means 2 or fewer in stock.
 - **Order emails:** each new shop order is emailed to `businesses.order_alert_email` if it is set and Resend is configured. A failed email never stops the order.
+- **Item details:** items have MRP, wholesaler (never shown to customers), a low-stock alert level (blank = the business's `default_low_stock`), up to 5 `photos` (the first is the cover and is copied to `photo_url`), tags from a fixed list (`lib/item-tags.ts`, matched by a check constraint) and `archived`. Archiving also takes an item off sale. A blank code gets the next automatic one (`item_code_prefix` + `next_item_no`, moved only by the `items_assign_code` trigger, which members cannot edit).
 - **Customers without a phone:** online bookings may leave the phone blank, stored as `''`. `sendWhatsApp` skips those, so code that messages customers must keep going through it.
 
 ### Not yet in this repository

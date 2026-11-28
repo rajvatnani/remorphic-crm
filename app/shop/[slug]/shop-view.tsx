@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { placeShopOrder, type ShopBusiness, type ShopItem, type ShopCategory } from '@/app/actions/shop'
 import { formatRupees } from '@/lib/money'
+import { itemTags } from '@/lib/item-tags'
 import { MapPin, Search, ShoppingBag, Minus, Plus, X, Package } from 'lucide-react'
 
 type Cart = Record<string, number> // item id → qty
@@ -40,6 +41,56 @@ function QtyControl({ item, q, setQty }: { item: ShopItem; q: number; setQty: (i
       >
         <Plus className="w-4 h-4" />
       </button>
+    </div>
+  )
+}
+
+function Price({ item, large = false }: { item: ShopItem; large?: boolean }) {
+  const mrp = item.mrp_paise != null && item.mrp_paise > item.price_paise ? item.mrp_paise : null
+  return (
+    <span className="flex flex-wrap items-baseline gap-x-1.5">
+      <span className={`font-bold text-gray-900 ${large ? 'text-2xl' : ''}`}>{formatRupees(item.price_paise)}</span>
+      {mrp && (
+        <>
+          <span className={`text-gray-400 line-through ${large ? 'text-base' : 'text-xs'}`}>{formatRupees(mrp)}</span>
+          <span className={`font-semibold text-green-700 ${large ? 'text-sm' : 'text-[11px]'}`}>{Math.round((1 - item.price_paise / mrp) * 100)}% off</span>
+        </>
+      )}
+    </span>
+  )
+}
+
+function Tags({ item }: { item: ShopItem }) {
+  const tags = itemTags(item.tags)
+  if (!tags.length) return null
+  return (
+    <div className="absolute top-2 left-2 right-2 flex flex-wrap gap-1 pointer-events-none">
+      {tags.map(t => <span key={t.key} className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shadow-sm ${t.style}`}>{t.label}</span>)}
+    </div>
+  )
+}
+
+function Gallery({ item }: { item: ShopItem }) {
+  const photos = item.photos?.length ? item.photos : item.photo_url ? [item.photo_url] : []
+  const [index, setIndex] = useState(0)
+  if (!photos.length) return <Photo item={item} className="w-full aspect-square" />
+  return (
+    <div>
+      <div className="relative">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={photos[index]} alt={item.name} className="w-full aspect-square object-cover" />
+        <Tags item={item} />
+      </div>
+      {photos.length > 1 && (
+        <div className="flex gap-2 px-5 pt-3 overflow-x-auto">
+          {photos.map((url, i) => (
+            <button key={url} onClick={() => setIndex(i)} className={`shrink-0 rounded-lg overflow-hidden border-2 ${i === index ? 'border-[#F15A24]' : 'border-transparent'}`} aria-label={`Photo ${i + 1}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt="" className="w-14 h-14 object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -284,12 +335,15 @@ export default function ShopView({
             const left = item.stock
             return (
               <div key={item.id} onClick={() => setDetail(item)} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden cursor-pointer flex flex-col">
-                <Photo item={item} className="w-full aspect-square" />
+                <div className="relative">
+                  <Photo item={item} className="w-full aspect-square" />
+                  <Tags item={item} />
+                </div>
                 <div className="p-3 flex-1 flex flex-col gap-2">
                   <p className="text-sm font-medium text-gray-900 line-clamp-2">{item.name}</p>
                   <div className="mt-auto flex items-center justify-between gap-2">
                     <div>
-                      <p className="font-bold text-gray-900">{formatRupees(item.price_paise)}</p>
+                      <Price item={item} />
                       {left != null && left > 0 && left <= 5 && <p className="text-[11px] text-amber-600 font-medium">Only {left} left</p>}
                     </div>
                     <QtyControl item={item} q={cart[item.id] ?? 0} setQty={setQty} />
@@ -308,7 +362,7 @@ export default function ShopView({
         <div className="fixed inset-0 z-40 bg-black/40 flex items-end sm:items-center justify-center" onClick={() => setDetail(null)}>
           <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="relative">
-              <Photo item={detail} className="w-full aspect-square" />
+              <Gallery key={detail.id} item={detail} />
               <button onClick={() => setDetail(null)} className="absolute top-3 right-3 w-9 h-9 rounded-full bg-white/90 flex items-center justify-center" aria-label="Close">
                 <X className="w-5 h-5" />
               </button>
@@ -318,7 +372,7 @@ export default function ShopView({
               {detail.code && <p className="text-xs text-gray-400">Code {detail.code}</p>}
               {detail.description && <p className="text-sm text-gray-600 whitespace-pre-line">{detail.description}</p>}
               <div className="flex items-center justify-between pt-2">
-                <span className="text-2xl font-bold text-gray-900">{formatRupees(detail.price_paise)}</span>
+                <Price item={detail} large />
                 <QtyControl item={detail} q={cart[detail.id] ?? 0} setQty={setQty} />
               </div>
             </div>
