@@ -40,7 +40,7 @@ export default function PaymentUpload({ token, alreadySent }: { token: string; a
           <CheckCircle className="w-4 h-4" /> Screenshot sent. The shop will confirm your payment.
         </p>
       )}
-      <label className={`flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-orange-200 rounded-2xl px-4 py-3 hover:bg-orange-50/50 transition-colors ${pending ? 'opacity-60 pointer-events-none' : ''}`}>
+      <label className={`flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-store-line rounded-full px-4 py-3 hover:bg-store-sand transition-colors ${pending ? 'opacity-60 pointer-events-none' : ''}`}>
         <input type="file" accept="image/*" onChange={handleFile} className="hidden" disabled={pending} />
         <Upload className="w-4 h-4 text-gray-500" />
         <span className="text-sm text-gray-600">

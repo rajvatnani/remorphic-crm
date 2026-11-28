@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { Copy, Check, MessageCircle, ExternalLink } from 'lucide-react'
 
 /** Copy, open or share the business's public links on WhatsApp */
 export default function ShareLinks({ links, businessName }: { links: { label: string; path: string }[]; businessName: string }) {
   const [copied, setCopied] = useState<string | null>(null)
+  // The site address is only known in the browser; the server renders the
+  // path alone, so both first renders match
+  const origin = useSyncExternalStore(() => () => {}, () => window.location.origin, () => '')
   if (!links.length) return null
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
 
   return (
     <div className="space-y-3">

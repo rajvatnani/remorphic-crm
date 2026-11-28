@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { getBusinessContext } from '@/lib/get-business-context'
 import { enabledModules } from '@/lib/modules'
 import { formatRupees } from '@/lib/money'
@@ -6,58 +5,11 @@ import {
   rangeStart, summary, pendingPayments, reorderList, istDay,
   type ReportOrder, type ReportItem,
 } from '@/lib/reports'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import ShareLinks from './share-links'
+import DashboardView, { type Stat } from './dashboard-view'
 import {
   Users, UserCheck, UserX, CalendarDays, UserPlus, Activity, Handshake, BellRing,
   ShoppingBag, IndianRupee, TrendingUp, Clock, CalendarCheck, Hourglass,
-  type LucideIcon,
 } from 'lucide-react'
-
-interface Stat {
-  title: string
-  value: string | number
-  icon: LucideIcon
-  color: string
-  bg: string
-  note?: string
-  href?: string
-}
-
-function StatGrid({ stats }: { stats: Stat[] }) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {stats.map(({ title, value, icon: Icon, color, bg, note, href }) => {
-        const card = (
-          <Card className={`shadow-none border border-gray-200 h-full ${href ? 'hover:border-[#F15A24] transition-colors' : ''}`}>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-gray-500">{title}</CardTitle>
-                <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center`}>
-                  <Icon className={`h-5 w-5 ${color}`} />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="font-heading text-3xl font-extrabold text-gray-900 tracking-tight tabular-nums">{value}</p>
-              {note && <p className="text-xs text-gray-400 mt-1">{note}</p>}
-            </CardContent>
-          </Card>
-        )
-        return href ? <Link key={title} href={href}>{card}</Link> : <div key={title}>{card}</div>
-      })}
-    </div>
-  )
-}
-
-function SectionTitle({ children, href, linkLabel }: { children: React.ReactNode; href?: string; linkLabel?: string }) {
-  return (
-    <div className="flex items-baseline justify-between mt-8 mb-4 first:mt-0">
-      <h2 className="font-heading text-lg font-bold text-gray-900 tracking-tight">{children}</h2>
-      {href && <Link href={href} className="text-sm font-medium text-[#F15A24] hover:underline">{linkLabel}</Link>}
-    </div>
-  )
-}
 
 export default async function DashboardPage() {
   const ctx = await getBusinessContext()
@@ -100,7 +52,7 @@ export default async function DashboardPage() {
           .neq('status', 'cancelled')
       : none,
     on.orders
-      ? supabase.from('items').select('id, name, code, price_paise, cost_paise, stock, active, category_id, low_stock_level, archived').eq('business_id', business.id)
+      ? supabase.from('items').select('id, name, code, price_paise, cost_paise, stock, active, category_id, low_stock_level, archived, photos, photo_url').eq('business_id', business.id)
       : none,
     on.appointments
       ? supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('business_id', business.id).eq('appointment_date', today).neq('status', 'cancelled')
@@ -164,102 +116,24 @@ export default async function DashboardPage() {
     { title: 'Waiting for approval', value: apptsPending ?? 0, icon: Hourglass, color: 'text-purple-600', bg: 'bg-purple-50', note: 'Online booking requests', href: '/appointments' },
   ]
 
+  const hour = Number(new Date().toLocaleString('en-GB', { hour: 'numeric', hour12: false, timeZone: 'Asia/Kolkata' }))
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const todo = [
+    on.orders && newOrders > 0 ? `${newOrders} new ${newOrders === 1 ? 'order' : 'orders'}` : '',
+    on.appointments && (apptsPending ?? 0) > 0 ? `${apptsPending} ${apptsPending === 1 ? 'booking' : 'bookings'} to approve` : '',
+    on.leads && (dueTodayCount ?? 0) > 0 ? `${dueTodayCount} follow-up${dueTodayCount === 1 ? '' : 's'} due today` : '',
+  ].filter(Boolean)
+  const firstName = (business.owner_name ?? '').trim().split(/\s+/)[0] || business.name
+
   const shareLinks = [
     ...(on.orders && business.shop_enabled ? [{ label: 'Shop', path: `/shop/${business.slug}` }] : []),
     ...(on.appointments && business.slug ? [{ label: 'Online booking', path: `/book/${business.slug}` }] : []),
   ]
 
   return (
-    <div className="p-6 max-w-6xl">
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="font-heading text-4xl font-extrabold text-gray-900 tracking-tight">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Welcome back, {business.owner_name}. Here&apos;s how {business.name} is doing.
-          </p>
-        </div>
-        <a
-          href="https://remorphic.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-heading text-4xl font-extrabold italic hover:underline hidden sm:block"
-          style={{ color: '#F15A24' }}
-        >
-          Custozo
-        </a>
-      </div>
-
-      {on.orders && (
-        <>
-          <SectionTitle href="/orders" linkLabel="All orders →">Orders</SectionTitle>
-          <StatGrid stats={orderStats} />
-
-          <div className="grid gap-4 lg:grid-cols-2 mt-4">
-            <Card className="shadow-none border border-gray-200">
-              <CardHeader className="pb-2">
-                <div className="flex items-baseline justify-between">
-                  <CardTitle className="text-sm font-semibold text-gray-900">Running low</CardTitle>
-                  <Link href="/items" className="text-xs font-medium text-[#F15A24] hover:underline">Items →</Link>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {low.length === 0 ? (
-                  <p className="text-sm text-gray-400 py-2">Nothing is running low.</p>
-                ) : (
-                  <ul className="divide-y divide-gray-100 text-sm">
-                    {low.slice(0, 5).map(i => (
-                      <li key={i.id} className="flex justify-between py-1.5">
-                        <span className="text-gray-700 truncate">{i.name}</span>
-                        <span className={`tabular-nums font-medium ${(i.stock ?? 0) <= 0 ? 'text-red-600' : 'text-amber-700'}`}>
-                          {(i.stock ?? 0) <= 0 ? 'Sold out' : `${i.stock} left`}
-                        </span>
-                      </li>
-                    ))}
-                    {low.length > 5 && <li className="pt-1.5 text-xs text-gray-400">and {low.length - 5} more in Reports</li>}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-none border border-gray-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold text-gray-900">Share your links</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {shareLinks.length ? (
-                  <ShareLinks links={shareLinks} businessName={business.name} />
-                ) : (
-                  <p className="text-sm text-gray-400 py-2">
-                    Turn on the shop link in <Link href="/settings" className="underline">Settings → Features</Link> to let customers order themselves.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </>
-      )}
-
-      {on.appointments && (
-        <>
-          <SectionTitle href="/appointments" linkLabel="Appointments →">Appointments</SectionTitle>
-          <StatGrid stats={apptStats} />
-          {!on.orders && shareLinks.length > 0 && (
-            <Card className="shadow-none border border-gray-200 mt-4 max-w-xl">
-              <CardContent className="pt-6"><ShareLinks links={shareLinks} businessName={business.name} /></CardContent>
-            </Card>
-          )}
-        </>
-      )}
-
-      <SectionTitle>{label}s</SectionTitle>
-      <StatGrid stats={customerStats} />
-
-      {on.leads && (
-        <>
-          <SectionTitle>Leads</SectionTitle>
-          <StatGrid stats={leadStats} />
-        </>
-      )}
-    </div>
+    <DashboardView
+      {...{ business, on, label, orderStats, apptStats, customerStats, leadStats, low, shareLinks, greeting, todo, firstName, newOrders, apptsPending }}
+    />
   )
 }
+
