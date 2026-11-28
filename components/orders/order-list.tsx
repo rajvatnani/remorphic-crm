@@ -3,14 +3,14 @@
 import { Fragment, useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { setOrderStatus, setOrderPayment } from '@/app/actions/orders'
+import { setOrderStatus, setOrderPayment, getOrderScreenshotUrl } from '@/app/actions/orders'
 import { formatRupees, toRupeesInput } from '@/lib/money'
 import { ORDER_STATUSES, orderTotal, hasInvoice, type Item, type ItemCategory, type Order, type OrderStatus } from '@/types'
 import OrderDialog, { type CustomerOption } from './order-dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ChevronDown, Plus, Search, Pencil, FileText, MessageCircle } from 'lucide-react'
+import { ChevronDown, Plus, Search, Pencil, FileText, MessageCircle, Receipt } from 'lucide-react'
 
 const STATUS_STYLE: Record<OrderStatus, string> = {
   new: 'bg-purple-50 text-purple-700',
@@ -174,6 +174,22 @@ function OrderDetail({ order, onEdit }: { order: Order; onEdit: () => void }) {
 
       {order.status !== 'cancelled' && (
         <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
+          {order.payment_screenshot && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1 text-emerald-700"
+              onClick={async () => {
+                // Open the tab first so the browser does not block it
+                const tab = window.open('', '_blank')
+                const url = await getOrderScreenshotUrl(order.id)
+                if (url && tab) tab.location.href = url
+                else { tab?.close(); setError('Could not open the screenshot.') }
+              }}
+            >
+              <Receipt className="h-3.5 w-3.5" /> Payment screenshot
+            </Button>
+          )}
           <span className="text-sm text-gray-600">Received ₹</span>
           <input
             value={paid}
@@ -357,6 +373,9 @@ export default function OrderList({
                     <TableCell>
                       {o.status !== 'cancelled' && (
                         <Badge className={`${PAYMENT_STYLE[o.payment_status]} border-0`}>{PAYMENT_LABEL[o.payment_status]}</Badge>
+                      )}
+                      {o.status !== 'cancelled' && o.payment_status !== 'paid' && o.payment_screenshot && (
+                        <span className="block text-[11px] text-emerald-700 mt-0.5">Screenshot sent</span>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
