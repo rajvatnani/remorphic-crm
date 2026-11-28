@@ -101,7 +101,7 @@ export default function InteractionLog({ leadId, interactions }: { leadId: strin
   }
 
   return (
-    <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
+    <div className="phone-cards bg-white rounded-3xl border border-fest-line overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="bg-fest-cream hover:bg-fest-cream">
@@ -124,15 +124,15 @@ export default function InteractionLog({ leadId, interactions }: { leadId: strin
           {sorted.map(row => (
             <TableRow key={row.id} className="hover:bg-fest-cream">
               <TableCell className="text-gray-600 whitespace-nowrap">{formatDate(row.occurredAt)}</TableCell>
-              <TableCell>
+              <TableCell className="phone-title">
                 <span className="font-medium text-fest-ink">{TYPE_LABELS[row.type]}</span>
               </TableCell>
               <TableCell className="text-gray-600">{formatDetails(row)}</TableCell>
-              <TableCell className="text-gray-500">{row.notes || '—'}</TableCell>
-              <TableCell className={row.followUpDate ? followUpBadgeClass(row.followUpDate, today) : 'text-gray-400'}>
+              <TableCell data-label="Notes" className="text-gray-500">{row.notes || '—'}</TableCell>
+              <TableCell data-label="Follow-up" className={row.followUpDate ? followUpBadgeClass(row.followUpDate, today) : 'text-gray-400'}>
                 {row.followUpDate ? formatDate(row.followUpDate) : '—'}
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="phone-actions text-right">
                 <div className="flex items-center justify-end gap-1">
                   <EditInteractionDialog
                     leadId={leadId}

@@ -138,7 +138,7 @@ export default function CustomerList({ customers, label }: { customers: Customer
         </select>
       </div>
 
-      <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
+      <div className="phone-cards bg-white rounded-3xl border border-fest-line overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-fest-cream hover:bg-fest-cream">
@@ -169,7 +169,7 @@ export default function CustomerList({ customers, label }: { customers: Customer
                   <span className="font-medium text-fest-ink">{row.name}</span>
                 </TableCell>
                 <TableCell className="text-gray-600">{row.phone}</TableCell>
-                <TableCell className="text-gray-600">{formatDate(row.lastVisit)}</TableCell>
+                <TableCell data-label="Last visit" className="text-gray-600">{formatDate(row.lastVisit)}</TableCell>
                 <TableCell>
                   <Badge
                     variant={row.isActive ? 'default' : 'secondary'}
@@ -182,8 +182,8 @@ export default function CustomerList({ customers, label }: { customers: Customer
                     {row.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-center text-gray-600">{row.totalVisits}</TableCell>
-                <TableCell className="text-right">
+                <TableCell data-label="Visits" className="text-center text-gray-600">{row.totalVisits}</TableCell>
+                <TableCell className="phone-actions text-right">
                   <div className="flex items-center justify-end gap-1.5">
                     <Link
                       href={`/add-visit?customerId=${row.id}&name=${encodeURIComponent(row.name)}`}
@@ -201,7 +201,7 @@ export default function CustomerList({ customers, label }: { customers: Customer
                     </Link>
                   </div>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="phone-actions text-right">
                   <div className="flex items-center justify-end gap-1">
                     {(() => {
                       const daysLeft = nudgeCooldownDaysLeft(row.nudgeSentAt)

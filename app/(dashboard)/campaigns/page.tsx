@@ -83,7 +83,7 @@ function InactiveTable({
   }
 
   return (
-    <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
+    <div className="phone-cards bg-white rounded-3xl border border-fest-line overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="bg-fest-cream hover:bg-fest-cream">
@@ -106,13 +106,13 @@ function InactiveTable({
             <TableRow key={customer.id}>
               <TableCell className="font-medium text-fest-ink">{customer.name}</TableCell>
               <TableCell className="text-gray-600">{customer.phone}</TableCell>
-              <TableCell className="text-gray-600">{formatDate(customer.lastVisit)}</TableCell>
+              <TableCell data-label="Last visit" className="text-gray-600">{formatDate(customer.lastVisit)}</TableCell>
               <TableCell>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
                   {customer.daysInactive} days
                 </span>
               </TableCell>
-              <TableCell className="text-right">
+              <TableCell className="phone-actions text-right">
                 <CopyButton customer={customer} businessName={businessName} />
               </TableCell>
             </TableRow>

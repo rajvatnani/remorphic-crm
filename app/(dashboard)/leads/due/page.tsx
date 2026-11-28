@@ -80,7 +80,7 @@ export default async function DueInteractionsPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
+      <div className="phone-cards bg-white rounded-3xl border border-fest-line overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-fest-cream hover:bg-fest-cream">
@@ -113,9 +113,9 @@ export default async function DueInteractionsPage() {
                     {STATUS_LABELS[row.lead.status]}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-gray-600">{TYPE_LABELS[row.type]}</TableCell>
-                <TableCell className="text-gray-500">{row.notes || '—'}</TableCell>
-                <TableCell className="text-right">
+                <TableCell data-label="From" className="text-gray-600">{TYPE_LABELS[row.type]}</TableCell>
+                <TableCell data-label="Notes" className="text-gray-500">{row.notes || '—'}</TableCell>
+                <TableCell className="phone-actions text-right">
                   <div className="flex items-center justify-end gap-1">
                     <AddInteractionDialog leadId={row.lead.id} leadName={row.lead.name} compact />
                     <Link
