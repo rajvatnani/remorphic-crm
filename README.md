@@ -80,6 +80,7 @@ SQL files in [`supabase/`](supabase) are run by hand in the Supabase SQL Editor.
 16. `shop_migration.sql`
 17. `categories_invoice_migration.sql`
 18. `order_payment_proof_migration.sql`
+19. `stock_log_migration.sql`
 
 When code needs a database change, add a new file and note here where it goes in the order. Run it in Supabase **before** merging the code that depends on it.
 
@@ -95,6 +96,7 @@ Rules to keep:
 - **Invoices:** `/invoice/<order public_token>` is built from the order each time it is opened, for confirmed, ready and delivered orders only. It prints the business's `gstin` and `invoice_note` if set. Nothing is stored.
 - **Categories:** `item_categories` belong to one business; a trigger stops an item using another business's category. Deleting a category keeps its items.
 - **Order payment screenshots:** customers upload them on their order page; the server checks the file is an image under 3 MB and stores it in the private `payment-screenshots` bucket under `<business id>/orders/`, replacing any earlier one. Staff open it through a one-hour signed link. Uploading never marks an order paid.
+- **Stock log:** a trigger on `items` writes a `stock_moves` row for every change to `stock`, so nothing goes unlogged. Functions that change stock say why through the `app.stock_reason`, `app.stock_order` and `app.stock_note` settings (local to the transaction); anything else is logged as `edit`. Members can read the log but not write it. Manual changes go through `adjust_stock`.
 - **Customers without a phone:** online bookings may leave the phone blank, stored as `''`. `sendWhatsApp` skips those, so code that messages customers must keep going through it.
 
 ### Not yet in this repository
