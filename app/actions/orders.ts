@@ -31,6 +31,14 @@ export interface ItemInput {
   cost?: string
   stock?: string
   active: boolean
+  photo_url?: string | null
+}
+
+// Only photos uploaded to this project's business-photos bucket
+function cleanPhotoUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  const base = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/business-photos/`
+  return url.startsWith(base) ? url : null
 }
 
 function cleanItem(input: ItemInput) {
@@ -52,6 +60,7 @@ function cleanItem(input: ItemInput) {
       cost_paise: cost,
       stock,
       active: Boolean(input.active),
+      photo_url: cleanPhotoUrl(input.photo_url),
     },
   }
 }

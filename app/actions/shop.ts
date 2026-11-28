@@ -1,0 +1,209 @@
+'use server'
+
+import { createHmac } from 'node:crypto'
+import { headers } from 'next/headers'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { normalizePhone, isValidPhone } from '@/lib/phone'
+import { sendWhatsApp } from '@/lib/whatsapp'
+import { formatRupees } from '@/lib/money'
+
+// Public pages: everything from the browser is untrusted, and the anon key
+// cannot read items or orders, so these run with the service role and
+// return only what the shop page shows.
+
+function adminClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+
+const UUID_RE = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i
+const TOKEN_RE = /^[0-9a-f]{32}$/
+
+export interface ShopItem {
+  id: string
+  name: string
+  code: string | null
+  description: string | null
+  price_paise: number
+  stock: number | null
+  photo_url: string | null
+}
+
+export interface ShopBusiness {
+  id: string
+  name: string
+  slug: string
+  address: string | null
+  photo: string | null
+  phone: string | null
+  payment_qr: string | null
+}
+
+export async function getShopData(slug: string): Promise<{ business: ShopBusiness; items: ShopItem[] } | null> {
+  const admin = adminClient()
+  const { data: business } = await admin
+    .from('businesses')
+    .select('id, name, slug, address, photo, phone, payment_qr, orders_enabled, shop_enabled')
+    .eq('slug', String(slug))
+    .maybeSingle()
+  if (!business || !business.orders_enabled || !business.shop_enabled) return null
+
+  const { data: items } = await admin
+    .from('items')
+    .select('id, name, code, description, price_paise, stock, photo_url')
+    .eq('business_id', business.id)
+    .eq('active', true)
+    .order('name')
+
+  const { orders_enabled: _o, shop_enabled: _s, ...pub } = business
+  void _o; void _s
+  return { business: pub as ShopBusiness, items: (items ?? []) as ShopItem[] }
+}
+
+function keyedHash(value: string) {
+  return createHmac('sha256', process.env.SUPABASE_SERVICE_ROLE_KEY!).update(value).digest('hex')
+}
+
+export type PlaceOrderResult =
+  | { ok: true; token: string }
+  | { ok: false; error: string; stockItem?: string; available?: number }
+
+export async function placeShopOrder(input: {
+  businessId: string
+  name: string
+  phone: string
+  address: string
+  note: string
+  lines: { item_id: string; qty: number }[]
+}): Promise<PlaceOrderResult> {
+  // Collapse whitespace so a name cannot add lines to the owner's message
+  const name = String(input.name ?? '').replace(/\s+/g, ' ').trim().slice(0, 80)
+  const phone = normalizePhone(String(input.phone ?? ''))
+  const address = String(input.address ?? '').trim().slice(0, 500)
+  const note = String(input.note ?? '').trim().slice(0, 300)
+
+  if (!name) return { ok: false, error: 'Please enter your name.' }
+  if (!isValidPhone(phone)) return { ok: false, error: 'Please enter a valid mobile number.' }
+  if (!UUID_RE.test(String(input.businessId))) return { ok: false, error: 'This shop is not available.' }
+
+  const lines = (Array.isArray(input.lines) ? input.lines : [])
+    .slice(0, 50)
+    .filter(l => UUID_RE.test(String(l?.item_id)))
+    .map(l => ({ item_id: String(l.item_id), qty: Math.floor(Number(l.qty)) }))
+    .filter(l => l.qty > 0)
+  if (!lines.length) return { ok: false, error: 'Your cart is empty.' }
+
+  const ip = (await headers()).get('x-forwarded-for')?.split(',')[0].trim()
+  const admin = adminClient()
+  const { data, error } = await admin.rpc('place_shop_order', {
+    p_business_id: input.businessId,
+    p_name: name,
+    p_phone: phone,
+    p_address: address,
+    p_note: note,
+    p_lines: lines,
+    p_ip_hash: ip ? keyedHash(`ip:${ip}`) : null,
+  })
+
+  if (error || !data) {
+    console.error('[Shop] place_shop_order failed:', error?.code)
+    return { ok: false, error: 'Could not place your order. Please try again.' }
+  }
+
+  switch (data.result) {
+    case 'ok':
+      break
+    case 'closed':
+      return { ok: false, error: 'This shop is not taking orders right now.' }
+    case 'limited':
+      return { ok: false, error: 'Too many orders from this number. Please try again in a few minutes.' }
+    case 'unavailable':
+      return { ok: false, error: 'An item in your cart is no longer available. Please remove it and try again.' }
+    case 'stock':
+      return {
+        ok: false,
+        error: data.available > 0
+          ? `Only ${data.available} of ${data.item} left. Please lower the quantity.`
+          : `${data.item} is sold out. Please remove it from your cart.`,
+        stockItem: data.item,
+        available: data.available,
+      }
+    default:
+      return { ok: false, error: 'Your cart is empty.' }
+  }
+
+  // Tell the owner. The order stands whether or not this is sent.
+  const { data: business } = await admin
+    .from('businesses').select('phone').eq('id', input.businessId).single()
+  if (business?.phone) {
+    const { data: order } = await admin
+      .from('orders')
+      .select('order_no, order_items(name, qty, price_paise)')
+      .eq('id', data.order_id)
+      .single()
+    if (order) {
+      const total = (order.order_items as { qty: number; price_paise: number }[])
+        .reduce((s, l) => s + l.qty * l.price_paise, 0)
+      const list = (order.order_items as { name: string; qty: number }[])
+        .map(l => `• ${l.qty} × ${l.name}`).join('\n')
+      await sendWhatsApp(
+        business.phone,
+        `🛍️ New shop order #${order.order_no}\n\n*${name}* (${phone})\n${list}\nTotal ${formatRupees(total)}\n\nOpen Custozo → Orders to confirm.`
+      )
+    }
+  }
+
+  return { ok: true, token: data.token }
+}
+
+export interface ShopOrderView {
+  order_no: number
+  status: string
+  payment_status: string
+  paid_paise: number
+  delivery_paise: number
+  discount_paise: number
+  address: string | null
+  notes: string | null
+  created_at: string
+  customer_name: string
+  lines: { name: string; qty: number; price_paise: number }[]
+  business: ShopBusiness
+}
+
+/** The customer's own order page, found by its unguessable token */
+export async function getShopOrder(slug: string, token: string): Promise<ShopOrderView | null> {
+  if (!TOKEN_RE.test(String(token))) return null
+  const admin = adminClient()
+  const { data: order } = await admin
+    .from('orders')
+    .select('order_no, status, payment_status, paid_paise, delivery_paise, discount_paise, address, notes, created_at, business_id, customers(name), order_items(name, qty, price_paise)')
+    .eq('public_token', token)
+    .maybeSingle()
+  if (!order) return null
+
+  const { data: business } = await admin
+    .from('businesses')
+    .select('id, name, slug, address, photo, phone, payment_qr')
+    .eq('id', order.business_id)
+    .single()
+  if (!business || business.slug !== slug) return null
+
+  const customer = order.customers as unknown as { name: string } | null
+  return {
+    order_no: order.order_no,
+    status: order.status,
+    payment_status: order.payment_status,
+    paid_paise: order.paid_paise,
+    delivery_paise: order.delivery_paise,
+    discount_paise: order.discount_paise,
+    address: order.address,
+    notes: order.notes,
+    created_at: order.created_at,
+    customer_name: customer?.name ?? '',
+    lines: order.order_items as ShopOrderView['lines'],
+    business: business as ShopBusiness,
+  }
+}

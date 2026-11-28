@@ -21,6 +21,7 @@ export interface Business {
   appointments_enabled?: boolean
   visits_enabled?: boolean
   orders_enabled?: boolean
+  shop_enabled?: boolean
 }
 
 export interface Customer {
@@ -128,6 +129,7 @@ export interface Item {
   cost_paise: number | null
   stock: number | null
   active: boolean
+  photo_url?: string | null
   created_at: string
 }
 
@@ -163,6 +165,8 @@ export interface Order {
   notes: string | null
   due_date: string | null
   created_at: string
+  source?: 'staff' | 'shop'
+  address?: string | null
   customers: { id: string; name: string; phone: string } | null
   order_items: OrderLine[]
 }

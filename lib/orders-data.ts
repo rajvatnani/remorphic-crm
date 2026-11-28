@@ -1,7 +1,7 @@
 import type { Item, Order } from '@/types'
 import type { CustomerOption } from '@/components/orders/order-dialog'
 
-const ORDER_SELECT = 'id, order_no, customer_id, status, payment_status, paid_paise, delivery_paise, discount_paise, notes, due_date, created_at, customers(id, name, phone), order_items(id, item_id, name, price_paise, cost_paise, qty)'
+const ORDER_SELECT = 'id, order_no, source, address, customer_id, status, payment_status, paid_paise, delivery_paise, discount_paise, notes, due_date, created_at, customers(id, name, phone), order_items(id, item_id, name, price_paise, cost_paise, qty)'
 
 /** Orders (optionally for one customer), items and customers for the order screens */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

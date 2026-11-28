@@ -104,6 +104,7 @@ function OrderDetail({ order, onEdit }: { order: Order; onEdit: () => void }) {
       </table>
 
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500">
+        {order.address && <span>Deliver to: {order.address}</span>}
         {order.due_date && <span>Due {fmtDate(order.due_date)}</span>}
         {cost != null && order.status !== 'cancelled' && (
           <span>Profit {formatRupees(subtotal - order.discount_paise - cost)}</span>
@@ -302,6 +303,7 @@ export default function OrderList({
                   <TableRow className={`cursor-pointer hover:bg-gray-50 ${isOpen ? 'bg-orange-50/40 border-b-0' : ''}`} onClick={() => toggle(o.id)}>
                     <TableCell className="whitespace-nowrap">
                       <span className="font-semibold text-gray-900">#{o.order_no}</span>
+                      {o.source === 'shop' && <Badge className="ml-1.5 bg-orange-50 text-[#F15A24] border-0 text-[10px]">Shop</Badge>}
                       <span className="block text-xs text-gray-400">{fmtDate(o.created_at)}</span>
                     </TableCell>
                     {!fixedCustomerId && (
