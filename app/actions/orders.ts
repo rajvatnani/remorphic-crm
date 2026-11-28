@@ -274,3 +274,43 @@ export async function getOrderScreenshotUrl(orderId: string): Promise<string | n
   const { data } = await createAdminClient().storage.from('payment-screenshots').createSignedUrl(path, 3600)
   return data?.signedUrl ?? null
 }
+
+// ─── stock ────────────────────────────────────────────────────────────────────
+
+export type StockReason = 'restock' | 'damaged' | 'correction' | 'other'
+
+export async function adjustStock(itemId: string, change: number, reason: StockReason, note: string): Promise<Result> {
+  const n = Math.trunc(Number(change))
+  if (!Number.isFinite(n) || n === 0) return { ok: false, error: 'Enter how many to add or remove.' }
+  const { supabase } = await getBusiness()
+  const { error } = await supabase.rpc('adjust_stock', {
+    p_item: itemId,
+    p_change: n,
+    p_reason: reason,
+    p_note: String(note ?? '').trim() || null,
+  })
+  if (error) return { ok: false, error: error.message }
+  refresh()
+  return { ok: true }
+}
+
+export interface StockMove {
+  id: string
+  change: number
+  stock_after: number
+  reason: 'order' | 'order_return' | 'edit' | StockReason
+  note: string | null
+  created_at: string
+  orders: { order_no: number } | null
+}
+
+export async function getStockMoves(itemId: string): Promise<StockMove[]> {
+  const { supabase } = await getBusiness()
+  const { data } = await supabase
+    .from('stock_moves')
+    .select('id, change, stock_after, reason, note, created_at, orders(order_no)')
+    .eq('item_id', itemId)
+    .order('created_at', { ascending: false })
+    .limit(100)
+  return (data ?? []) as unknown as StockMove[]
+}

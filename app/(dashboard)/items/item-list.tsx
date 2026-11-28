@@ -8,6 +8,7 @@ import { compressImage } from '@/lib/image'
 import { createClient } from '@/lib/supabase/client'
 import type { Item, ItemCategory } from '@/types'
 import CategoriesDialog from './categories-dialog'
+import StockDialog from './stock-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -163,6 +164,8 @@ export default function ItemList({
 }) {
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [managing, setManaging] = useState(false)
+  const [stockFor, setStockFor] = useState<string | null>(null)
+  const stockItem = items.find(i => i.id === stockFor) ?? null
   const categoryName = Object.fromEntries(categories.map(c => [c.id, c.name]))
   const itemCounts: Record<string, number> = {}
   for (const i of items) if (i.category_id) itemCounts[i.category_id] = (itemCounts[i.category_id] ?? 0) + 1
@@ -268,8 +271,18 @@ export default function ItemList({
                 <TableCell className="text-gray-500">{(item.category_id && categoryName[item.category_id]) || '—'}</TableCell>
                 <TableCell className="text-right">{formatRupees(item.price_paise)}</TableCell>
                 <TableCell className="text-right text-gray-500">{item.cost_paise != null ? formatRupees(item.cost_paise) : '—'}</TableCell>
-                <TableCell className={`text-right ${item.stock != null && item.stock <= 0 ? 'text-red-600 font-medium' : ''}`}>
-                  {item.stock ?? '—'}
+                <TableCell className="text-right">
+                  {item.stock == null ? (
+                    <span className="text-gray-400" title="Not tracked. Enter a stock count when editing the item to track it.">—</span>
+                  ) : (
+                    <button
+                      onClick={() => setStockFor(item.id)}
+                      title="Adjust stock and see its history"
+                      className={`min-w-10 px-2 py-1 rounded-lg border border-gray-200 hover:border-[#F15A24] hover:text-[#F15A24] ${item.stock <= 0 ? 'text-red-600 font-medium' : ''}`}
+                    >
+                      {item.stock}
+                    </button>
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
@@ -297,6 +310,7 @@ export default function ItemList({
           onClose={() => { setAdding(false); setEditing(null) }}
         />
       )}
+      {stockItem && <StockDialog item={stockItem} onClose={() => setStockFor(null)} />}
       {managing && (
         <CategoriesDialog
           key={categories.map(c => c.id + c.name).join()}
