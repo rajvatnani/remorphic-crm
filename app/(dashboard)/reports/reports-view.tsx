@@ -24,10 +24,10 @@ function Section({ title, note, csv, children }: {
   children: React.ReactNode
 }) {
   return (
-    <section className="bg-white rounded-xl border border-gray-200 p-4 sm:p-5">
+    <section className="bg-white rounded-3xl border border-fest-line p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
         <div>
-          <h2 className="font-semibold text-gray-900">{title}</h2>
+          <h2 className="font-semibold text-fest-ink">{title}</h2>
           {note && <p className="text-xs text-gray-500 mt-0.5">{note}</p>}
         </div>
         {csv && csv.rows.length > 0 && <ExportCsvButton filenamePrefix={csv.name} headers={csv.headers} rows={csv.rows} />}
@@ -87,7 +87,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
   return (
     <div className="p-6 max-w-6xl space-y-5">
       <div>
-        <h1 className="font-heading text-4xl font-extrabold text-gray-900 tracking-tight">Reports</h1>
+        <h1 className="font-heading text-4xl font-extrabold text-fest-ink tracking-tight">Reports</h1>
         <p className="text-sm text-gray-500 mt-1">Counts confirmed, packed, shipped and delivered orders. New and cancelled orders are left out. Profit is after what you paid for delivery.</p>
       </div>
 
@@ -98,7 +98,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
             key={r.key}
             href={link({ range: r.key })}
             scroll={false}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap ${r.key === range ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap ${r.key === range ? 'bg-fest-plum text-white' : 'text-gray-600 hover:bg-gray-100'}`}
           >
             {r.label}
           </Link>
@@ -107,9 +107,9 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {tiles.map(t => (
-          <div key={t.label} className="bg-white rounded-xl border border-gray-200 p-4">
+          <div key={t.label} className="bg-white rounded-3xl border border-fest-line p-4">
             <p className="text-xs text-gray-500">{t.label}</p>
-            <p className="text-2xl font-bold text-gray-900 tabular-nums mt-1">{t.value}</p>
+            <p className="text-2xl font-bold text-fest-ink tabular-nums mt-1">{t.value}</p>
             {t.hint && <p className="text-[11px] text-gray-400 mt-1">{t.hint}</p>}
           </div>
         ))}
@@ -131,12 +131,12 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
                 <span>{formatRupees(maxSales)}</span>
                 <span>₹0</span>
               </div>
-              <div className="flex-1 min-w-0 h-48 flex items-end gap-0.5 border-b border-gray-200" role="img" aria-label={`Sales by ${bucket}, ${rangeLabel}. Figures are in the table below.`}>
+              <div className="flex-1 min-w-0 h-48 flex items-end gap-0.5 border-b border-fest-line" role="img" aria-label={`Sales by ${bucket}, ${rangeLabel}. Figures are in the table below.`}>
                 {periods.map(p => (
                   <div key={p.key} className="group relative flex-1 h-full flex items-end justify-center min-w-[3px]">
                     <div
                       className="w-full max-w-10 rounded-t-[4px] transition-opacity group-hover:opacity-80"
-                      style={{ height: p.sales ? `${Math.max((p.sales / maxSales) * 100, 1.5)}%` : 0, backgroundColor: '#F15A24' }}
+                      style={{ height: p.sales ? `${Math.max((p.sales / maxSales) * 100, 1.5)}%` : 0, backgroundColor: '#C81E5B' }}
                     />
                     <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-10 whitespace-nowrap rounded-lg bg-gray-900 px-2.5 py-1.5 text-[11px] text-white shadow-lg">
                       <p className="font-semibold">{periodLabel(p.key, bucket)}</p>
@@ -165,7 +165,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
           {byQty.length === 0 ? <Empty>Nothing sold in this period.</Empty> : (
             <table className="w-full text-sm">
               <thead><tr><th className={th}>Item</th><th className={thR}>Qty</th><th className={thR}>Sales</th></tr></thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-fest-line/70">
                 {byQty.map(s => <tr key={s.key}><td className={td}>{s.name}</td><td className={tdR}>{s.qty}</td><td className={tdR}>{formatRupees(s.sales)}</td></tr>)}
               </tbody>
             </table>
@@ -176,7 +176,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
           {byProfit.length === 0 ? <Empty>No sales with a known cost in this period.</Empty> : (
             <table className="w-full text-sm">
               <thead><tr><th className={th}>Item</th><th className={thR}>Qty</th><th className={thR}>Profit</th></tr></thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-fest-line/70">
                 {byProfit.map(s => <tr key={s.key}><td className={td}>{s.name}</td><td className={tdR}>{s.qty}</td><td className={tdR}>{formatRupees(s.profit)}</td></tr>)}
               </tbody>
             </table>
@@ -193,7 +193,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr><th className={th}>Order</th><th className={th}>Date</th><th className={th}>{customerLabel}</th><th className={thR}>Total</th><th className={thR}>Paid</th><th className={thR}>Due</th></tr></thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-fest-line/70">
                 {pending.map(p => (
                   <tr key={p.order.id}>
                     <td className={td + ' font-medium'}>#{p.order.order_no}</td>
@@ -201,7 +201,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
                     <td className={td}>{p.order.customers ? <Link href={`/customers/${p.order.customers.id}`} className="hover:underline">{p.order.customers.name}</Link> : '—'}</td>
                     <td className={tdR}>{formatRupees(p.total)}</td>
                     <td className={tdR}>{formatRupees(p.order.paid_paise)}</td>
-                    <td className={tdR + ' font-semibold text-gray-900'}>{formatRupees(p.due)}</td>
+                    <td className={tdR + ' font-semibold text-fest-ink'}>{formatRupees(p.due)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -219,7 +219,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
           {reorder.length === 0 ? <Empty>Nothing is running low.</Empty> : (
             <table className="w-full text-sm">
               <thead><tr><th className={th}>Item</th><th className={thR}>In stock</th></tr></thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-fest-line/70">
                 {reorder.map(i => <tr key={i.id}><td className={td}>{i.name}</td><td className={tdR + ((i.stock ?? 0) <= 0 ? ' text-red-600 font-semibold' : '')}>{(i.stock ?? 0) <= 0 ? 'Sold out' : i.stock}</td></tr>)}
               </tbody>
             </table>
@@ -234,7 +234,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
           {value.length === 0 ? <Empty>No stock recorded.</Empty> : (
             <table className="w-full text-sm">
               <thead><tr><th className={th}>Category</th><th className={thR}>Units</th><th className={thR}>At cost</th><th className={thR}>At price</th></tr></thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-fest-line/70">
                 {value.map(v => (
                   <tr key={v.name}>
                     <td className={td}>{v.name}{v.costMissing > 0 && <span className="block text-[11px] text-gray-400">{v.costMissing} without a cost</span>}</td>
@@ -264,7 +264,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
       >
         <div className="flex gap-1 mb-3">
           {IDLE_DAYS.map(d => (
-            <Link key={d} href={link({ idle: d })} scroll={false} className={`px-3 py-1 rounded-lg text-xs font-medium ${d === idle ? 'bg-gray-900 text-white' : 'text-gray-600 bg-gray-100 hover:bg-gray-200'}`}>
+            <Link key={d} href={link({ idle: d })} scroll={false} className={`px-3 py-1 rounded-lg text-xs font-medium ${d === idle ? 'bg-fest-plum text-white' : 'text-gray-600 bg-gray-100 hover:bg-gray-200'}`}>
               {d} days
             </Link>
           ))}
@@ -273,7 +273,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr><th className={th}>Item</th><th className={thR}>In stock</th><th className={th}>Last sold</th><th className={thR}>Value at cost</th><th className={thR}>Value at price</th></tr></thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-fest-line/70">
                 {dead.map(d => (
                   <tr key={d.item.id}>
                     <td className={td}>{d.item.name}</td>
@@ -298,7 +298,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr><th className={th}>Name</th><th className={th}>Phone</th><th className={thR}>Orders</th><th className={thR}>Spent</th><th className={th}>Last order</th></tr></thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-fest-line/70">
                 {repeat.map(c => (
                   <tr key={c.id}>
                     <td className={td}><Link href={`/customers/${c.id}`} className="font-medium hover:underline">{c.name}</Link></td>

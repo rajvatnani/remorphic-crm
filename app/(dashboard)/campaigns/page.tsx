@@ -83,10 +83,10 @@ function InactiveTable({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="bg-gray-50 hover:bg-gray-50">
+          <TableRow className="bg-fest-cream hover:bg-fest-cream">
             <TableHead className="font-medium">Name</TableHead>
             <TableHead className="font-medium">Phone</TableHead>
             <TableHead className="font-medium">Last Visit</TableHead>
@@ -104,7 +104,7 @@ function InactiveTable({
           )}
           {customers.map(customer => (
             <TableRow key={customer.id}>
-              <TableCell className="font-medium text-gray-900">{customer.name}</TableCell>
+              <TableCell className="font-medium text-fest-ink">{customer.name}</TableCell>
               <TableCell className="text-gray-600">{customer.phone}</TableCell>
               <TableCell className="text-gray-600">{formatDate(customer.lastVisit)}</TableCell>
               <TableCell>
@@ -186,7 +186,7 @@ export default function CampaignsPage() {
   return (
     <div className="p-6 max-w-6xl">
       <div className="mb-6">
-        <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">Campaigns</h1>
+        <h1 className="font-heading font-heading text-4xl font-extrabold text-fest-ink tracking-tight tracking-tight">Campaigns</h1>
         <p className="text-sm text-gray-500 mt-1">
           Re-engage inactive {label.toLowerCase()}s with a personal message
         </p>

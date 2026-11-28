@@ -74,7 +74,7 @@ export default async function LeadsPage({
     <div className="p-6 max-w-6xl">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">Leads</h1>
+          <h1 className="font-heading font-heading text-4xl font-extrabold text-fest-ink tracking-tight tracking-tight">Leads</h1>
           <p className="text-sm text-gray-500 mt-1">{leads?.length ?? 0} total</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -86,12 +86,12 @@ export default async function LeadsPage({
           <Link
             href="/leads/due"
             title="Due Today"
-            className="inline-flex items-center gap-2 h-9 px-2.5 sm:px-3.5 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center gap-2 h-9 px-2.5 sm:px-3.5 rounded-lg border border-fest-line text-sm font-medium text-gray-700 hover:bg-fest-cream transition-colors"
           >
             <BellRing className="h-4 w-4" />
             <span className="hidden sm:inline">Due Today</span>
             {!!dueCount && (
-              <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-[#F15A24] text-white text-xs font-semibold">
+              <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-[#C81E5B] text-white text-xs font-semibold">
                 {dueCount}
               </span>
             )}

@@ -13,7 +13,7 @@ import { Pencil, FileText, MessageCircle, Receipt, History } from 'lucide-react'
 
 export const STATUS_LABEL = Object.fromEntries(ORDER_STATUSES.map(s => [s.value, s.label])) as Record<OrderStatus, string>
 
-const input = 'h-8 rounded-lg border border-input px-2 text-sm outline-none focus:border-orange-400'
+const input = 'h-8 rounded-lg border border-input px-2 text-sm outline-none focus:border-fest-rani'
 
 function fmtDate(d: string) {
   return new Date(d.length === 10 ? d + 'T00:00:00' : d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -100,12 +100,12 @@ export default function OrderDetail({ order, onEdit }: { order: Order; onEdit: (
     : null
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+    <div className="bg-white rounded-lg border border-fest-line p-4 space-y-4">
       <table className="w-full text-sm">
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="divide-y divide-fest-line/70">
           {order.order_items.map(l => (
             <tr key={l.id}>
-              <td className="py-1.5 text-gray-900">{l.name}</td>
+              <td className="py-1.5 text-fest-ink">{l.name}</td>
               <td className="py-1.5 text-gray-500 text-right whitespace-nowrap">{l.qty} × {formatRupees(l.price_paise)}</td>
               <td className="py-1.5 text-right font-medium whitespace-nowrap w-28">{formatRupees(l.qty * l.price_paise)}</td>
             </tr>
@@ -136,15 +136,15 @@ export default function OrderDetail({ order, onEdit }: { order: Order; onEdit: (
 
       {/* Next steps */}
       <div className="flex flex-wrap items-center gap-2">
-        {order.status === 'new' && <Button size="sm" disabled={pending} onClick={() => go('confirmed')} className="bg-[#F15A24] hover:bg-[#d44d1b] text-white">Confirm</Button>}
-        {order.status === 'confirmed' && <Button size="sm" disabled={pending} onClick={() => go('ready')} className="bg-[#F15A24] hover:bg-[#d44d1b] text-white">Mark packed</Button>}
+        {order.status === 'new' && <Button size="sm" disabled={pending} onClick={() => go('confirmed')} className="bg-[#C81E5B] hover:bg-[#A81549] text-white">Confirm</Button>}
+        {order.status === 'confirmed' && <Button size="sm" disabled={pending} onClick={() => go('ready')} className="bg-[#C81E5B] hover:bg-[#A81549] text-white">Mark packed</Button>}
         {order.status === 'ready' && (
           <>
-            <Button size="sm" disabled={pending} onClick={() => setMode(m => (m === 'ship' ? null : 'ship'))} className="bg-[#F15A24] hover:bg-[#d44d1b] text-white">Mark shipped</Button>
+            <Button size="sm" disabled={pending} onClick={() => setMode(m => (m === 'ship' ? null : 'ship'))} className="bg-[#C81E5B] hover:bg-[#A81549] text-white">Mark shipped</Button>
             <Button size="sm" variant="outline" disabled={pending} onClick={() => go('delivered')}>Handed over (delivered)</Button>
           </>
         )}
-        {order.status === 'shipped' && <Button size="sm" disabled={pending} onClick={() => go('delivered')} className="bg-[#F15A24] hover:bg-[#d44d1b] text-white">Mark delivered</Button>}
+        {order.status === 'shipped' && <Button size="sm" disabled={pending} onClick={() => go('delivered')} className="bg-[#C81E5B] hover:bg-[#A81549] text-white">Mark delivered</Button>}
         {editable && (
           <Button size="sm" variant="outline" disabled={pending} onClick={onEdit} className="gap-1">
             <Pencil className="h-3.5 w-3.5" /> Edit
@@ -161,11 +161,11 @@ export default function OrderDetail({ order, onEdit }: { order: Order; onEdit: (
       </div>
 
       {mode === 'ship' && (
-        <form onSubmit={e => { e.preventDefault(); go('shipped', { courier, tracking, deliveryCost: shipCost }) }} className="grid gap-2 sm:grid-cols-4 rounded-lg bg-gray-50 p-3">
+        <form onSubmit={e => { e.preventDefault(); go('shipped', { courier, tracking, deliveryCost: shipCost }) }} className="grid gap-2 sm:grid-cols-4 rounded-lg bg-fest-cream p-3">
           <input value={courier} onChange={e => setCourier(e.target.value)} placeholder="Courier, e.g. Delhivery" className={input} aria-label="Courier" />
           <input value={tracking} onChange={e => setTracking(e.target.value)} placeholder="Tracking number" className={input} aria-label="Tracking number" />
           <input value={shipCost} onChange={e => setShipCost(e.target.value)} inputMode="decimal" placeholder="You paid ₹ (optional)" className={input} aria-label="What delivery cost you" />
-          <Button type="submit" size="sm" disabled={pending} className="bg-[#F15A24] hover:bg-[#d44d1b] text-white">Save and mark shipped</Button>
+          <Button type="submit" size="sm" disabled={pending} className="bg-[#C81E5B] hover:bg-[#A81549] text-white">Save and mark shipped</Button>
           <p className="sm:col-span-4 text-[11px] text-gray-500">What you paid the courier is taken off this order&apos;s profit.</p>
         </form>
       )}
@@ -187,7 +187,7 @@ export default function OrderDetail({ order, onEdit }: { order: Order; onEdit: (
         )}
         {hasInvoice(order.status) && order.public_token && (
           <>
-            <a href={`/invoice/${order.public_token}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-gray-200 text-[0.8rem] font-medium text-gray-700 hover:bg-gray-50">
+            <a href={`/invoice/${order.public_token}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-fest-line text-[0.8rem] font-medium text-gray-700 hover:bg-fest-cream">
               <FileText className="h-3.5 w-3.5" /> Invoice
             </a>
             {invoiceWa && (
@@ -197,13 +197,13 @@ export default function OrderDetail({ order, onEdit }: { order: Order; onEdit: (
             )}
           </>
         )}
-        <button type="button" onClick={() => setShowHistory(h => !h)} className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-gray-200 text-[0.8rem] font-medium text-gray-700 hover:bg-gray-50">
+        <button type="button" onClick={() => setShowHistory(h => !h)} className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-fest-line text-[0.8rem] font-medium text-gray-700 hover:bg-fest-cream">
           <History className="h-3.5 w-3.5" /> {showHistory ? 'Hide history' : 'History'}
         </button>
       </div>
 
       {showHistory && (
-        <ol className="text-xs text-gray-600 space-y-1 border-l-2 border-gray-100 pl-3">
+        <ol className="text-xs text-gray-600 space-y-1 border-l-2 border-fest-line/70 pl-3">
           {history === null && <li className="text-gray-400">Loading…</li>}
           {history?.map((h, i) => (
             <li key={i}>
@@ -219,7 +219,7 @@ export default function OrderDetail({ order, onEdit }: { order: Order; onEdit: (
       {order.status !== 'cancelled' || order.payment_status !== 'pending' ? (
         <form
           onSubmit={e => { e.preventDefault(); run(() => recordPayment(order.id, paid, method, upiRef)) }}
-          className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3"
+          className="flex flex-wrap items-center gap-2 border-t border-fest-line/70 pt-3"
         >
           {order.payment_screenshot && (
             <Button

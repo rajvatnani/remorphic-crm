@@ -61,7 +61,7 @@ export default async function CustomerDetailPage({
     <div className="p-6 max-w-4xl">
       <Link
         href="/customers"
-        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6"
+        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-fest-ink mb-6"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to {label}s
@@ -69,7 +69,7 @@ export default async function CustomerDetailPage({
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-heading font-heading text-4xl font-extrabold text-gray-900 tracking-tight tracking-tight">{customer.name}</h1>
+          <h1 className="font-heading font-heading text-4xl font-extrabold text-fest-ink tracking-tight tracking-tight">{customer.name}</h1>
           <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
             <span className="flex items-center gap-1.5">
               <Phone className="h-3.5 w-3.5" />
@@ -84,7 +84,7 @@ export default async function CustomerDetailPage({
         <Badge
           className={
             isActive
-              ? 'bg-[#F15A24]/10 text-[#F15A24] border-0 text-sm'
+              ? 'bg-[#C81E5B]/10 text-[#C81E5B] border-0 text-sm'
               : 'bg-amber-50 text-amber-700 border-0 text-sm'
           }
         >
@@ -93,33 +93,33 @@ export default async function CustomerDetailPage({
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <Card className="shadow-none border border-gray-200">
+        <Card className="shadow-none border-0">
           <CardHeader className="pb-1 pt-4">
             <CardTitle className="text-xs text-gray-500 font-medium">Total Visits</CardTitle>
           </CardHeader>
           <CardContent className="pb-4">
             <div className="flex items-center gap-2">
               <Hash className="h-4 w-4 text-gray-400" />
-              <span className="text-2xl font-bold text-gray-900">{visits?.length ?? 0}</span>
+              <span className="text-2xl font-bold text-fest-ink">{visits?.length ?? 0}</span>
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-none border border-gray-200">
+        <Card className="shadow-none border-0">
           <CardHeader className="pb-1 pt-4">
             <CardTitle className="text-xs text-gray-500 font-medium">Last Visit</CardTitle>
           </CardHeader>
           <CardContent className="pb-4">
-            <p className="text-sm font-semibold text-gray-900">
+            <p className="text-sm font-semibold text-fest-ink">
               {lastVisit ? formatDate(lastVisit) : '—'}
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-none border border-gray-200">
+        <Card className="shadow-none border-0">
           <CardHeader className="pb-1 pt-4">
             <CardTitle className="text-xs text-gray-500 font-medium">Status</CardTitle>
           </CardHeader>
           <CardContent className="pb-4">
-            <p className="text-sm font-semibold text-gray-900">
+            <p className="text-sm font-semibold text-fest-ink">
               {isActive ? `Within ${threshold} days` : `${threshold}+ days ago`}
             </p>
           </CardContent>
@@ -128,7 +128,7 @@ export default async function CustomerDetailPage({
 
       {orderData && (
         <div className="mb-6">
-          <h2 className="font-semibold text-gray-900 mb-3">Orders</h2>
+          <h2 className="font-semibold text-fest-ink mb-3">Orders</h2>
           <OrderList
             compact
             orders={orderData.orders}
@@ -142,19 +142,19 @@ export default async function CustomerDetailPage({
       )}
 
       {modules.visits && (
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="px-4 py-3 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">Visit History</h2>
+      <div className="bg-white rounded-3xl border border-fest-line">
+        <div className="px-4 py-3 border-b border-fest-line/70">
+          <h2 className="font-semibold text-fest-ink">Visit History</h2>
         </div>
         {!visits?.length ? (
           <p className="text-center py-12 text-gray-400 text-sm">No visits recorded yet.</p>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-fest-line/70">
             {(visits ?? []).map((visit: any) => (
               <div key={visit.id} className="px-4 py-4">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-medium text-gray-900">{visit.service}</p>
+                    <p className="font-medium text-fest-ink">{visit.service}</p>
                     {visit.notes && (
                       <p className="text-sm text-gray-500 mt-0.5">{visit.notes}</p>
                     )}

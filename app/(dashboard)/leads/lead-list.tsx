@@ -159,10 +159,10 @@ export default function LeadList({
         </select>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gray-50 hover:bg-gray-50">
+            <TableRow className="bg-fest-cream hover:bg-fest-cream">
               <SortableHead label="Name" sortKey="name" sort={sort} onSort={handleSort} />
               <SortableHead label="Phone" sortKey="phone" sort={sort} onSort={handleSort} />
               <SortableHead label="Interested In" sortKey="interest" sort={sort} onSort={handleSort} />
@@ -189,9 +189,9 @@ export default function LeadList({
               const isOpen = expanded.has(row.id)
               return (
                 <Fragment key={row.id}>
-                  <TableRow id={`lead-${row.id}`} className={`hover:bg-gray-50 ${isOpen ? 'bg-orange-50/40 border-b-0' : ''}`}>
+                  <TableRow id={`lead-${row.id}`} className={`hover:bg-fest-cream ${isOpen ? 'bg-fest-marigoldsoft/40 border-b-0' : ''}`}>
                     <TableCell>
-                      <span className="font-medium text-gray-900">{row.name}</span>
+                      <span className="font-medium text-fest-ink">{row.name}</span>
                     </TableCell>
                     <TableCell className="text-gray-600">{row.phone}</TableCell>
                     <TableCell className="text-gray-600">{row.interest || '—'}</TableCell>
@@ -206,8 +206,8 @@ export default function LeadList({
                         type="button"
                         onClick={() => setOpen(row.id, !isOpen)}
                         aria-expanded={isOpen}
-                        className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-orange-50 whitespace-nowrap"
-                        style={{ color: '#F15A24', borderColor: '#F15A24' }}
+                        className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-fest-ranisoft whitespace-nowrap"
+                        style={{ color: '#C81E5B', borderColor: '#C81E5B' }}
                       >
                         Interactions ({rowInteractions.length})
                         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -234,7 +234,7 @@ export default function LeadList({
                     </TableCell>
                   </TableRow>
                   {isOpen && (
-                    <TableRow className="bg-orange-50/40 hover:bg-orange-50/40">
+                    <TableRow className="bg-fest-marigoldsoft/40 hover:bg-fest-ranisoft/40">
                       <TableCell colSpan={7} className="px-4 pb-4 pt-0 whitespace-normal">
                         <InteractionLog leadId={row.id} interactions={rowInteractions} />
                       </TableCell>

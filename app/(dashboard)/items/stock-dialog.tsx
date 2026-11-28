@@ -68,17 +68,17 @@ export default function StockDialog({ item, onClose }: { item: Item; onClose: ()
           <DialogTitle>Stock — {item.name}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-gray-600 -mt-1">
-          In stock now: <span className={`text-lg font-bold ${(item.stock ?? 0) <= 0 ? 'text-red-600' : 'text-gray-900'}`}>{item.stock}</span>
+          In stock now: <span className={`text-lg font-bold ${(item.stock ?? 0) <= 0 ? 'text-red-600' : 'text-fest-ink'}`}>{item.stock}</span>
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-3 rounded-xl border border-gray-200 p-3">
+        <form onSubmit={handleSubmit} className="space-y-3 rounded-3xl border border-fest-line p-3">
           <div className="flex gap-1">
             {(['add', 'remove'] as const).map(d => (
               <button
                 key={d}
                 type="button"
                 onClick={() => pickDirection(d)}
-                className={`flex-1 h-8 rounded-lg text-sm font-medium ${direction === d ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'}`}
+                className={`flex-1 h-8 rounded-lg text-sm font-medium ${direction === d ? 'bg-fest-plum text-white' : 'bg-gray-100 text-gray-600'}`}
               >
                 {d === 'add' ? 'Add stock' : 'Remove stock'}
               </button>
@@ -99,21 +99,21 @@ export default function StockDialog({ item, onClose }: { item: Item; onClose: ()
           </div>
           <Input value={note} onChange={e => setNote(e.target.value)} placeholder="Note (optional), e.g. supplier bill no." />
           {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
-          <Button type="submit" disabled={pending} className="w-full bg-[#F15A24] hover:bg-[#d44d1b] text-white">
+          <Button type="submit" disabled={pending} className="w-full bg-[#C81E5B] hover:bg-[#A81549] text-white">
             {pending ? 'Saving…' : 'Save'}
           </Button>
         </form>
 
         <div>
-          <p className="text-sm font-semibold text-gray-900 mb-2">History</p>
+          <p className="text-sm font-semibold text-fest-ink mb-2">History</p>
           {moves === null && <p className="text-sm text-gray-400">Loading…</p>}
           {moves?.length === 0 && <p className="text-sm text-gray-400">No changes recorded yet.</p>}
           {moves && moves.length > 0 && (
-            <div className="divide-y divide-gray-100 border border-gray-100 rounded-lg">
+            <div className="divide-y divide-fest-line/70 border border-fest-line/70 rounded-lg">
               {moves.map(m => (
                 <div key={m.id} className="flex items-start justify-between gap-3 px-3 py-2 text-sm">
                   <div className="min-w-0">
-                    <p className="text-gray-900">
+                    <p className="text-fest-ink">
                       {REASON_LABEL[m.reason] ?? m.reason}
                       {m.orders && ` #${m.orders.order_no}`}
                     </p>

@@ -138,10 +138,10 @@ export default function CustomerList({ customers, label }: { customers: Customer
         </select>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gray-50 hover:bg-gray-50">
+            <TableRow className="bg-fest-cream hover:bg-fest-cream">
               <SortableHead label="Name" sortKey="name" sort={sort} onSort={handleSort} />
               <SortableHead label="Phone" sortKey="phone" sort={sort} onSort={handleSort} />
               <SortableHead label="Last Visit" sortKey="lastVisit" sort={sort} onSort={handleSort} />
@@ -164,9 +164,9 @@ export default function CustomerList({ customers, label }: { customers: Customer
               </TableRow>
             )}
             {sorted.map(row => (
-              <TableRow key={row.id} className="hover:bg-gray-50">
+              <TableRow key={row.id} className="hover:bg-fest-cream">
                 <TableCell>
-                  <span className="font-medium text-gray-900">{row.name}</span>
+                  <span className="font-medium text-fest-ink">{row.name}</span>
                 </TableCell>
                 <TableCell className="text-gray-600">{row.phone}</TableCell>
                 <TableCell className="text-gray-600">{formatDate(row.lastVisit)}</TableCell>
@@ -175,7 +175,7 @@ export default function CustomerList({ customers, label }: { customers: Customer
                     variant={row.isActive ? 'default' : 'secondary'}
                     className={
                       row.isActive
-                        ? 'bg-[#F15A24]/10 text-[#F15A24] hover:bg-[#F15A24]/20 border-0'
+                        ? 'bg-[#C81E5B]/10 text-[#C81E5B] hover:bg-[#C81E5B]/20 border-0'
                         : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-0'
                     }
                   >
@@ -187,15 +187,15 @@ export default function CustomerList({ customers, label }: { customers: Customer
                   <div className="flex items-center justify-end gap-1.5">
                     <Link
                       href={`/add-visit?customerId=${row.id}&name=${encodeURIComponent(row.name)}`}
-                      className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 transition-colors hover:bg-gray-50"
+                      className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-fest-line text-gray-600 transition-colors hover:bg-fest-cream"
                       title="Log walk-in visit"
                     >
                       <PlusCircle className="h-3.5 w-3.5" /> Log Visit
                     </Link>
                     <Link
                       href={`/customers/${row.id}`}
-                      className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-orange-50"
-                      style={{ color: '#F15A24', borderColor: '#F15A24' }}
+                      className="inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-fest-ranisoft"
+                      style={{ color: '#C81E5B', borderColor: '#C81E5B' }}
                     >
                       View Visits →
                     </Link>

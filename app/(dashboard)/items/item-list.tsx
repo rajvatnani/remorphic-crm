@@ -80,14 +80,14 @@ export default function ItemList({
     <div className="p-6 max-w-5xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-heading text-4xl font-extrabold text-gray-900 tracking-tight">Items</h1>
+          <h1 className="font-heading text-4xl font-extrabold text-fest-ink tracking-tight">Items</h1>
           <p className="text-sm text-gray-500 mt-1">{items.length - archivedCount} items{archivedCount ? ` · ${archivedCount} archived` : ''}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => setManaging(true)} className="gap-2">
             <Tags className="h-4 w-4" /> Categories
           </Button>
-          <Button onClick={() => setAdding(true)} className="bg-[#F15A24] hover:bg-[#d44d1b] text-white gap-2">
+          <Button onClick={() => setAdding(true)} className="bg-[#C81E5B] hover:bg-[#A81549] text-white gap-2">
             <Plus className="h-4 w-4" /> Add Item
           </Button>
         </div>
@@ -118,17 +118,17 @@ export default function ItemList({
       {archivedCount > 0 && (
         <button
           onClick={() => setShowArchived(a => !a)}
-          className={`h-9 px-3 rounded-lg text-sm font-medium ${showArchived ? 'bg-gray-900 text-white' : 'border border-input text-gray-600 hover:bg-gray-50'}`}
+          className={`h-9 px-3 rounded-lg text-sm font-medium ${showArchived ? 'bg-fest-plum text-white' : 'border border-input text-gray-600 hover:bg-fest-cream'}`}
         >
           {showArchived ? 'Back to items' : `Archived (${archivedCount})`}
         </button>
       )}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gray-50 hover:bg-gray-50">
+            <TableRow className="bg-fest-cream hover:bg-fest-cream">
               <TableHead>Name</TableHead>
               <TableHead>Code</TableHead>
               <TableHead>Category</TableHead>
@@ -154,10 +154,10 @@ export default function ItemList({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={item.photo_url} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
                   ) : (
-                    <div className="w-9 h-9 rounded-lg bg-gray-50 shrink-0" />
+                    <div className="w-9 h-9 rounded-lg bg-fest-cream shrink-0" />
                   )}
                   <span className="min-w-0">
-                    <span className="block font-medium text-gray-900">{item.name}</span>
+                    <span className="block font-medium text-fest-ink">{item.name}</span>
                     {item.wholesaler && <span className="block text-[11px] text-gray-400">{item.wholesaler}</span>}
                   </span>
                   {!item.active && <Badge className="bg-gray-100 text-gray-500 border-0 text-xs">Hidden</Badge>}
@@ -179,7 +179,7 @@ export default function ItemList({
                     <button
                       onClick={() => setStockFor(item.id)}
                       title="Adjust stock and see its history"
-                      className={`min-w-10 px-2 py-1 rounded-lg border hover:border-[#F15A24] hover:text-[#F15A24] ${item.stock <= 0 ? 'text-red-600 font-medium border-red-200' : isLow(item) ? 'text-amber-700 font-medium border-amber-200 bg-amber-50' : 'border-gray-200'}`}
+                      className={`min-w-10 px-2 py-1 rounded-lg border hover:border-[#C81E5B] hover:text-[#C81E5B] ${item.stock <= 0 ? 'text-red-600 font-medium border-red-200' : isLow(item) ? 'text-amber-700 font-medium border-amber-200 bg-amber-50' : 'border-fest-line'}`}
                     >
                       {item.stock}
                     </button>

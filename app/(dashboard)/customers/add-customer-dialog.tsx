@@ -40,7 +40,7 @@ export default function AddCustomerDialog({ label }: { label: string }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button className="bg-[#F15A24] hover:bg-[#d44d1b] text-white gap-2" />}>
+      <DialogTrigger render={<Button className="bg-[#C81E5B] hover:bg-[#A81549] text-white gap-2" />}>
         <Plus className="h-4 w-4" />
         Add {label}
       </DialogTrigger>
@@ -86,7 +86,7 @@ export default function AddCustomerDialog({ label }: { label: string }) {
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-[#F15A24] hover:bg-[#d44d1b] text-white"
+              className="flex-1 bg-[#C81E5B] hover:bg-[#A81549] text-white"
               disabled={pending}
             >
               {pending ? 'Adding…' : `Add ${label}`}

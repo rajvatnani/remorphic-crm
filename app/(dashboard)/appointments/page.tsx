@@ -185,11 +185,11 @@ function AddBookingDialog({
           {/* Toggle */}
           <div className="flex items-center gap-4">
             <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-              <input type="radio" checked={!isNew} onChange={() => { setIsNew(false); setQuery(''); setCustomerId(''); setSelectedName('') }} className="accent-[#F15A24]" />
+              <input type="radio" checked={!isNew} onChange={() => { setIsNew(false); setQuery(''); setCustomerId(''); setSelectedName('') }} className="accent-[#C81E5B]" />
               Existing {label}
             </label>
             <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-              <input type="radio" checked={isNew} onChange={() => setIsNew(true)} className="accent-[#F15A24]" />
+              <input type="radio" checked={isNew} onChange={() => setIsNew(true)} className="accent-[#C81E5B]" />
               New {label}
             </label>
           </div>
@@ -211,28 +211,28 @@ function AddBookingDialog({
                   />
                 </div>
                 {showSuggestions && filtered.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                  <div className="absolute z-20 w-full mt-1 bg-white border border-fest-line rounded-lg shadow-lg overflow-hidden">
                     {filtered.map(c => (
                       <button
                         key={c.id}
                         type="button"
                         onMouseDown={() => { setCustomerId(c.id); setSelectedName(c.name); setQuery(c.name); setShowSuggestions(false) }}
-                        className="w-full text-left px-4 py-2.5 hover:bg-gray-50 flex items-center justify-between"
+                        className="w-full text-left px-4 py-2.5 hover:bg-fest-cream flex items-center justify-between"
                       >
-                        <span className="font-medium text-sm text-gray-900">{c.name}</span>
+                        <span className="font-medium text-sm text-fest-ink">{c.name}</span>
                         <span className="text-sm text-gray-400">{c.phone}</span>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-              {selectedName && <p className="text-xs font-medium" style={{ color: '#F15A24' }}>✓ {selectedName} selected</p>}
+              {selectedName && <p className="text-xs font-medium" style={{ color: '#C81E5B' }}>✓ {selectedName} selected</p>}
             </div>
           )}
 
           {/* New customer fields */}
           {isNew && (
-            <div className="bg-gray-50 rounded-lg p-3 space-y-3">
+            <div className="bg-fest-cream rounded-lg p-3 space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="new_customer_name">Name</Label>
@@ -260,7 +260,7 @@ function AddBookingDialog({
 
           <div className="flex gap-3 pt-1">
             <Button type="button" variant="outline" className="flex-1" onClick={onClose}>Cancel</Button>
-            <Button type="submit" className="flex-1 text-white" style={{ backgroundColor: '#F15A24' }} disabled={pending}>
+            <Button type="submit" className="flex-1 text-white" style={{ backgroundColor: '#C81E5B' }} disabled={pending}>
               {pending ? 'Booking…' : 'Book Appointment'}
             </Button>
           </div>
@@ -372,7 +372,7 @@ function ChangeBookingDialog({
                 value={slot}
                 onChange={e => setSlot(e.target.value)}
                 disabled={closed}
-                className="w-full h-9 px-3 rounded-lg border border-input bg-transparent text-sm outline-none focus:border-orange-400 disabled:opacity-50"
+                className="w-full h-9 px-3 rounded-lg border border-input bg-transparent text-sm outline-none focus:border-fest-rani disabled:opacity-50"
               >
                 {!slots.includes(slot) && <option value={slot}>{formatSlotTime(slot)}</option>}
                 {slots.map(s => {
@@ -408,7 +408,7 @@ function ChangeBookingDialog({
           {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={pending || closed} style={{ backgroundColor: '#F15A24' }}>
+            <Button type="submit" disabled={pending || closed} style={{ backgroundColor: '#C81E5B' }}>
               {pending ? 'Saving…' : 'Save changes'}
             </Button>
           </div>
@@ -547,11 +547,11 @@ export default function AppointmentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight text-gray-900">Appointments</h1>
+          <h1 className="font-heading text-3xl font-bold tracking-tight text-fest-ink">Appointments</h1>
           <p className="text-sm text-gray-500 mt-1">{formatDate(date)}</p>
         </div>
         {configLoaded && !config && (
-          <a href="/settings" className="text-sm font-medium" style={{ color: '#F15A24' }}>
+          <a href="/settings" className="text-sm font-medium" style={{ color: '#C81E5B' }}>
             ⚙ Configure slots first →
           </a>
         )}
@@ -581,7 +581,7 @@ export default function AppointmentsPage() {
         <button
           onClick={() => step(-1)}
           aria-label={hasOpenDays ? 'Previous open day' : 'Previous day'}
-          className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+          className="p-1.5 rounded-lg border border-fest-line hover:bg-gray-100 transition-colors"
         >
           <ChevronLeft className="h-4 w-4 text-gray-600" />
         </button>
@@ -589,19 +589,19 @@ export default function AppointmentsPage() {
           type="date"
           value={date}
           onChange={e => e.target.value && pickDate(e.target.value)}
-          className="h-9 px-3 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 outline-none focus:border-orange-400"
+          className="h-9 px-3 rounded-lg border border-fest-line text-sm font-medium text-gray-700 outline-none focus:border-fest-rani"
         />
         <button
           onClick={() => step(1)}
           aria-label={hasOpenDays ? 'Next open day' : 'Next day'}
-          className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+          className="p-1.5 rounded-lg border border-fest-line hover:bg-gray-100 transition-colors"
         >
           <ChevronRight className="h-4 w-4 text-gray-600" />
         </button>
         {!isToday && (
           <button
             onClick={() => pickDate(todayStr())}
-            className="px-3 h-9 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-100"
+            className="px-3 h-9 rounded-lg border border-fest-line text-sm font-medium text-gray-600 hover:bg-gray-100"
           >
             Today
           </button>
@@ -632,7 +632,7 @@ export default function AppointmentsPage() {
 
       {/* Closed day */}
       {configLoaded && config && isClosed && (
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+        <div className="bg-fest-cream border border-fest-line rounded-xl p-6 text-center">
           <p className="font-medium text-gray-700">You&apos;re closed on {FULL_DAY_NAMES[dayOfWeek]}s</p>
           <p className="text-sm text-gray-500 mt-1">No appointment slots on this day.</p>
           {(() => {
@@ -641,7 +641,7 @@ export default function AppointmentsPage() {
               <button
                 onClick={() => pickDate(next)}
                 className="mt-4 inline-flex items-center gap-1 px-4 h-9 rounded-lg text-sm font-medium text-white"
-                style={{ backgroundColor: '#F15A24' }}
+                style={{ backgroundColor: '#C81E5B' }}
               >
                 Go to {shortDate(next)} <ChevronRight className="h-4 w-4" />
               </button>
@@ -662,11 +662,11 @@ export default function AppointmentsPage() {
             const full = active.length >= config.max_per_slot
 
             return (
-              <div key={slot} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <div key={slot} className="bg-white rounded-3xl border border-fest-line overflow-hidden">
                 {/* Slot header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-fest-line/70">
                   <div className="flex items-center gap-3">
-                    <span className="font-semibold text-gray-900 text-sm w-24">
+                    <span className="font-semibold text-fest-ink text-sm w-24">
                       {formatSlotTime(slot)}
                     </span>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
@@ -682,8 +682,8 @@ export default function AppointmentsPage() {
                   {!full && (
                     <button
                       onClick={() => setDialogSlot(slot)}
-                      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-orange-50"
-                      style={{ color: '#F15A24', borderColor: '#F15A24' }}
+                      className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors hover:bg-fest-ranisoft"
+                      style={{ color: '#C81E5B', borderColor: '#C81E5B' }}
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Add Booking
@@ -693,7 +693,7 @@ export default function AppointmentsPage() {
 
                 {/* Bookings in this slot */}
                 {booked.length > 0 && (
-                  <div className="divide-y divide-gray-50">
+                  <div className="divide-y divide-fest-line/50">
                     {booked.map(appt => (
                       <div
                         key={appt.id}
@@ -701,7 +701,7 @@ export default function AppointmentsPage() {
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="min-w-0">
-                            <p className="font-medium text-sm text-gray-900 truncate">
+                            <p className="font-medium text-sm text-fest-ink truncate">
                               {appt.customers.name}
                             </p>
                             <p className="text-xs text-gray-500">
@@ -731,7 +731,7 @@ export default function AppointmentsPage() {
                               onClick={() => { setFlash(null); setChanging(appt) }}
                               disabled={actionPending}
                               title="Change booking"
-                              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-orange-50 hover:text-[#F15A24] transition-colors disabled:opacity-50"
+                              className="flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-fest-ranisoft hover:text-[#C81E5B] transition-colors disabled:opacity-50"
                             >
                               <Pencil className="h-3.5 w-3.5" />
                               Change

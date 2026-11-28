@@ -114,7 +114,7 @@ export default function CategoriesDialog({
           className="flex gap-2 mt-3"
         >
           <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="New category, e.g. Thalis" className="h-9" />
-          <Button type="submit" disabled={pending || !newName.trim()} className="bg-[#F15A24] hover:bg-[#d44d1b] text-white">Add</Button>
+          <Button type="submit" disabled={pending || !newName.trim()} className="bg-[#C81E5B] hover:bg-[#A81549] text-white">Add</Button>
         </form>
 
         {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}

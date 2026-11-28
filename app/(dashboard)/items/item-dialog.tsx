@@ -239,7 +239,7 @@ export default function ItemDialog({
                       type="button"
                       onClick={() => toggleTag(t.key)}
                       aria-pressed={on}
-                      className={`px-3 h-8 rounded-full text-sm font-medium border transition-colors ${on ? `${t.style} border-transparent` : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300'}`}
+                      className={`px-3 h-8 rounded-full text-sm font-medium border transition-colors ${on ? `${t.style} border-transparent` : 'bg-white text-gray-700 border-fest-line hover:border-gray-300'}`}
                     >
                       {t.label}
                     </button>
@@ -250,20 +250,20 @@ export default function ItemDialog({
             </div>
 
             <label className="flex items-center gap-2 text-sm text-gray-700">
-              <input type="checkbox" name="active" defaultChecked={item?.active ?? true} className="h-4 w-4 accent-[#F15A24]" />
+              <input type="checkbox" name="active" defaultChecked={item?.active ?? true} className="h-4 w-4 accent-[#C81E5B]" />
               Show in shop and new orders
             </label>
           </div>
 
           {/* Photos and save */}
           <div className="space-y-4">
-            <div className="rounded-xl border border-gray-200 p-3 space-y-2">
-              <p className="text-sm font-medium text-gray-900">Photos ({photos.length}/{MAX_PHOTOS})</p>
+            <div className="rounded-3xl border border-fest-line p-3 space-y-2">
+              <p className="text-sm font-medium text-fest-ink">Photos ({photos.length}/{MAX_PHOTOS})</p>
               <div className="grid grid-cols-3 gap-2">
                 {photos.map((url, i) => (
                   <div key={url} className="relative aspect-square">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt="" className="w-full h-full rounded-lg object-cover border border-gray-200" />
+                    <img src={url} alt="" className="w-full h-full rounded-lg object-cover border border-fest-line" />
                     {i === 0 ? (
                       <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1 text-[10px] text-white">Cover</span>
                     ) : (
@@ -290,7 +290,7 @@ export default function ItemDialog({
                   <div key={`up${i}`} className="aspect-square rounded-lg bg-gray-100 animate-pulse" />
                 ))}
                 {photos.length + uploading < MAX_PHOTOS && (
-                  <label className="aspect-square rounded-lg border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-xs text-gray-500 cursor-pointer hover:border-[#F15A24] hover:text-[#F15A24]">
+                  <label className="aspect-square rounded-lg border-2 border-dashed border-fest-line flex flex-col items-center justify-center text-xs text-gray-500 cursor-pointer hover:border-[#C81E5B] hover:text-[#C81E5B]">
                     <Plus className="w-4 h-4" /> Add
                     <input type="file" accept="image/*" multiple onChange={handlePhotos} className="hidden" />
                   </label>
@@ -302,7 +302,7 @@ export default function ItemDialog({
                 onClick={fillWithAi}
                 disabled={!aiReady || !photos.length || aiPending || uploading > 0}
                 className="w-full h-10 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-1.5 disabled:opacity-50"
-                style={{ background: 'linear-gradient(90deg, #F15A24, #e0567a)' }}
+                style={{ background: 'linear-gradient(90deg, #C81E5B, #e0567a)' }}
               >
                 <Sparkles className="w-4 h-4" /> {aiPending ? 'Writing…' : 'Fill details from photo with AI'}
               </button>
@@ -317,7 +317,7 @@ export default function ItemDialog({
             </div>
 
             {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{error}</p>}
-            <Button type="submit" disabled={pending || uploading > 0} className="w-full h-11 bg-[#F15A24] hover:bg-[#d44d1b] text-white">
+            <Button type="submit" disabled={pending || uploading > 0} className="w-full h-11 bg-[#C81E5B] hover:bg-[#A81549] text-white">
               {pending ? 'Saving…' : uploading > 0 ? 'Uploading photos…' : 'Save item'}
             </Button>
             <Button type="button" variant="outline" className="w-full" onClick={onClose}>Cancel</Button>

@@ -129,7 +129,7 @@ export default function EditInteractionDialog({
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-[#F15A24] hover:bg-[#d44d1b] text-white"
+              className="flex-1 bg-[#C81E5B] hover:bg-[#A81549] text-white"
               disabled={pending}
             >
               {pending ? 'Saving…' : 'Save Changes'}

@@ -67,13 +67,13 @@ export default function AddInteractionDialog({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-[#F15A24] hover:bg-orange-50 transition-colors"
+          className="p-1.5 rounded-lg text-gray-400 hover:text-[#C81E5B] hover:bg-fest-ranisoft transition-colors"
           title="Add interaction"
         >
           <MessageSquarePlus className="h-4 w-4" />
         </button>
       ) : (
-        <DialogTrigger render={<Button className="bg-[#F15A24] hover:bg-[#d44d1b] text-white gap-2" />}>
+        <DialogTrigger render={<Button className="bg-[#C81E5B] hover:bg-[#A81549] text-white gap-2" />}>
           <Plus className="h-4 w-4" />
           Add Interaction
         </DialogTrigger>
@@ -142,7 +142,7 @@ export default function AddInteractionDialog({
             </Button>
             <Button
               type="submit"
-              className="flex-1 bg-[#F15A24] hover:bg-[#d44d1b] text-white"
+              className="flex-1 bg-[#C81E5B] hover:bg-[#A81549] text-white"
               disabled={pending}
             >
               {pending ? 'Adding…' : 'Add Interaction'}

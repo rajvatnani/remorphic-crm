@@ -158,7 +158,7 @@ export default function VisitLog({ visits, label }: { visits: VisitRow[]; label:
 
         <Link
           href="/add-visit"
-          className="inline-flex items-center justify-center gap-1.5 h-8 px-2.5 rounded-lg bg-[#F15A24] hover:bg-[#d44d1b] text-white text-sm font-medium transition-colors"
+          className="inline-flex items-center justify-center gap-1.5 h-8 px-2.5 rounded-lg bg-[#C81E5B] hover:bg-[#A81549] text-white text-sm font-medium transition-colors"
         >
           <Plus className="h-4 w-4" />
           Add Visit
@@ -168,7 +168,7 @@ export default function VisitLog({ visits, label }: { visits: VisitRow[]; label:
       <div className="flex items-center gap-3 mb-3">
         <button
           onClick={() => setAnchor(a => stepAnchor(period, a, -1))}
-          className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+          className="p-1.5 rounded-lg border border-fest-line hover:bg-gray-100 transition-colors"
           aria-label="Previous"
         >
           <ChevronLeft className="h-4 w-4 text-gray-600" />
@@ -176,7 +176,7 @@ export default function VisitLog({ visits, label }: { visits: VisitRow[]; label:
         <span className="text-sm font-medium text-gray-700 min-w-[12rem] text-center">{range.label}</span>
         <button
           onClick={() => setAnchor(a => stepAnchor(period, a, 1))}
-          className="p-1.5 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+          className="p-1.5 rounded-lg border border-fest-line hover:bg-gray-100 transition-colors"
           aria-label="Next"
         >
           <ChevronRight className="h-4 w-4 text-gray-600" />
@@ -184,7 +184,7 @@ export default function VisitLog({ visits, label }: { visits: VisitRow[]; label:
         {!isCurrent && (
           <button
             onClick={() => setAnchor(todayStr())}
-            className="px-3 h-8 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+            className="px-3 h-8 rounded-lg border border-fest-line text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
           >
             Today
           </button>
@@ -195,10 +195,10 @@ export default function VisitLog({ visits, label }: { visits: VisitRow[]; label:
         {filtered.length} visit{filtered.length === 1 ? '' : 's'}
       </p>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-gray-50 hover:bg-gray-50">
+            <TableRow className="bg-fest-cream hover:bg-fest-cream">
               <SortableHead label="Date" sortKey="date" sort={sort} onSort={key => setSort(s => toggleSort(s, key))} />
               <SortableHead label={label} sortKey="customer" sort={sort} onSort={key => setSort(s => toggleSort(s, key))} />
               <SortableHead label="Phone" sortKey="phone" sort={sort} onSort={key => setSort(s => toggleSort(s, key))} />
@@ -215,10 +215,10 @@ export default function VisitLog({ visits, label }: { visits: VisitRow[]; label:
               </TableRow>
             )}
             {sorted.map(visit => (
-              <TableRow key={visit.id} className="hover:bg-gray-50">
+              <TableRow key={visit.id} className="hover:bg-fest-cream">
                 <TableCell className="text-gray-600 whitespace-nowrap">{formatVisitDate(visit.visitedAt)}</TableCell>
                 <TableCell>
-                  <Link href={`/customers/${visit.customerId}`} className="font-medium text-gray-900 hover:underline">
+                  <Link href={`/customers/${visit.customerId}`} className="font-medium text-fest-ink hover:underline">
                     {visit.customerName}
                   </Link>
                 </TableCell>

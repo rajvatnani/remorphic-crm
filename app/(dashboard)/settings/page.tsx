@@ -315,7 +315,7 @@ export default function SettingsPage() {
   return (
     <div className="p-6 max-w-2xl space-y-6">
       <div className="mb-2">
-        <h1 className="font-heading text-3xl font-bold tracking-tight text-gray-900">Settings</h1>
+        <h1 className="font-heading text-3xl font-bold tracking-tight text-fest-ink">Settings</h1>
         <p className="text-sm text-gray-500 mt-1">Manage your business profile and appointment configuration</p>
       </div>
 
@@ -327,7 +327,7 @@ export default function SettingsPage() {
               {/* Appointment Config */}
               <div className="space-y-3 pt-1">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900">Appointment Slots</h3>
+                  <h3 className="text-sm font-semibold text-fest-ink">Appointment Slots</h3>
                   <p className="text-xs text-gray-500">Define how your calendar is divided into bookable slots.</p>
                 </div>
                 <div>
@@ -384,7 +384,7 @@ export default function SettingsPage() {
                             className="w-12 h-10 rounded-lg text-sm font-medium border transition-colors"
                             style={
                               openDays.includes(i)
-                                ? { backgroundColor: '#F15A24', color: '#fff', borderColor: '#F15A24' }
+                                ? { backgroundColor: '#C81E5B', color: '#fff', borderColor: '#C81E5B' }
                                 : { backgroundColor: '#fff', color: '#6b7280', borderColor: '#e5e7eb' }
                             }
                           >
@@ -398,7 +398,7 @@ export default function SettingsPage() {
                       <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{apptError}</p>
                     )}
                     <div className="flex items-center gap-3">
-                      <Button type="submit" className="text-white" style={{ backgroundColor: '#F15A24' }} disabled={apptPending}>
+                      <Button type="submit" className="text-white" style={{ backgroundColor: '#C81E5B' }} disabled={apptPending}>
                         {apptPending ? 'Saving…' : 'Save Slot Config'}
                       </Button>
                       {apptSaved && (
@@ -415,12 +415,12 @@ export default function SettingsPage() {
               {businessSlug && (
                 <div className="space-y-3 pt-1">
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-900">Online Booking Link</h3>
+                    <h3 className="text-sm font-semibold text-fest-ink">Online Booking Link</h3>
                     <p className="text-xs text-gray-500">Share this link with customers so they can book appointments directly.</p>
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 truncate text-sm bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-700">
+                      <code className="flex-1 truncate text-sm bg-fest-cream border border-fest-line rounded-lg px-3 py-2 text-gray-700">
                         {typeof window !== 'undefined' ? `${window.location.origin}/book/${businessSlug}` : `/book/${businessSlug}`}
                       </code>
                       <Button
@@ -443,7 +443,7 @@ export default function SettingsPage() {
               {/* Gallery */}
               <div className="space-y-3 pt-1">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900">Gallery</h3>
+                  <h3 className="text-sm font-semibold text-fest-ink">Gallery</h3>
                   <p className="text-xs text-gray-500">Photos shown on your public booking page.</p>
                 </div>
                 <div className="space-y-4">
@@ -451,7 +451,7 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-3 gap-3">
                       {galleryPhotos.map(photo => (
                         <div key={photo.id} className="relative group">
-                          <img src={photo.url} alt="Gallery" className="w-full h-28 object-cover rounded-xl border border-gray-200" />
+                          <img src={photo.url} alt="Gallery" className="w-full h-28 object-cover rounded-3xl border border-fest-line" />
                           <button
                             type="button"
                             onClick={() => handleGalleryDelete(photo.id)}
@@ -467,7 +467,7 @@ export default function SettingsPage() {
                     <input type="file" accept="image/*" onChange={handleGalleryUpload} className="hidden" id="gallery_upload" />
                     <label
                       htmlFor="gallery_upload"
-                      className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                      className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-fest-line text-sm text-gray-600 hover:bg-fest-cream transition-colors"
                     >
                       <Upload className="h-4 w-4" />
                       {galleryUploading ? 'Uploading…' : 'Add Photo'}
@@ -482,7 +482,7 @@ export default function SettingsPage() {
       />
 
       {/* Business Profile */}
-      <Card className="shadow-none border border-gray-200">
+      <Card className="shadow-none border-0">
         <CardHeader>
           <CardTitle className="text-base font-semibold">Business Profile</CardTitle>
           <CardDescription>
@@ -542,7 +542,7 @@ export default function SettingsPage() {
             <div className="space-y-2">
               <Label>Business Photo</Label>
               {photoUrl && (
-                <img src={photoUrl} alt="Business" className="w-20 h-20 rounded-xl object-cover border border-gray-200" />
+                <img src={photoUrl} alt="Business" className="w-20 h-20 rounded-xl object-cover border border-fest-line" />
               )}
               <div className="flex items-center gap-2">
                 <input
@@ -554,7 +554,7 @@ export default function SettingsPage() {
                 />
                 <label
                   htmlFor="photo_upload"
-                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-fest-line text-sm text-gray-600 hover:bg-fest-cream transition-colors"
                 >
                   <Upload className="h-4 w-4" />
                   {photoUploading ? 'Uploading…' : photoUrl ? 'Change Photo' : 'Upload Photo'}
@@ -643,7 +643,7 @@ export default function SettingsPage() {
               <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-md">{profileError}</p>
             )}
             <div className="flex items-center gap-3">
-              <Button type="submit" className="text-white" style={{ backgroundColor: '#F15A24' }} disabled={profilePending}>
+              <Button type="submit" className="text-white" style={{ backgroundColor: '#C81E5B' }} disabled={profilePending}>
                 {profilePending ? 'Saving…' : 'Save Profile'}
               </Button>
               {profileSaved && (
@@ -657,7 +657,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Payment QR */}
-      <Card className="shadow-none border border-gray-200">
+      <Card className="shadow-none border-0">
         <CardHeader>
           <CardTitle className="text-base font-semibold">Payment QR Code</CardTitle>
           <CardDescription>Shown on your booking page, shop orders and invoices so customers can pay. Save profile after uploading.</CardDescription>
@@ -665,7 +665,7 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           {paymentQrUrl && (
             <div className="flex items-start gap-4">
-              <img src={paymentQrUrl} alt="Payment QR" className="w-32 h-32 object-contain rounded-xl border border-gray-200 bg-gray-50 p-1" />
+              <img src={paymentQrUrl} alt="Payment QR" className="w-32 h-32 object-contain rounded-3xl border border-fest-line bg-fest-cream p-1" />
               <button type="button" onClick={() => setPaymentQrUrl('')} className="text-xs text-gray-400 hover:text-red-500 transition-colors">
                 Remove
               </button>
@@ -675,7 +675,7 @@ export default function SettingsPage() {
             <input type="file" accept="image/*" onChange={handleQrUpload} className="hidden" id="qr_upload" />
             <label
               htmlFor="qr_upload"
-              className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+              className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-fest-line text-sm text-gray-600 hover:bg-fest-cream transition-colors"
             >
               <Upload className="h-4 w-4" />
               {qrUploading ? 'Uploading…' : paymentQrUrl ? 'Replace QR' : 'Upload QR Code'}
@@ -685,7 +685,7 @@ export default function SettingsPage() {
       </Card>
 
       {/* Staff Members */}
-      <Card className="shadow-none border border-gray-200">
+      <Card className="shadow-none border-0">
         <CardHeader>
           <CardTitle className="text-base font-semibold">Staff Members</CardTitle>
           <CardDescription>
@@ -704,7 +704,7 @@ export default function SettingsPage() {
               required
               className="flex-1"
             />
-            <Button type="submit" className="text-white gap-2" style={{ backgroundColor: '#F15A24' }} disabled={invitePending}>
+            <Button type="submit" className="text-white gap-2" style={{ backgroundColor: '#C81E5B' }} disabled={invitePending}>
               <UserPlus className="h-4 w-4" />
               {invitePending ? 'Sending…' : 'Invite'}
             </Button>
@@ -725,14 +725,14 @@ export default function SettingsPage() {
 
           {/* Staff list */}
           {staffList.length > 0 && (
-            <div className="border border-gray-200 rounded-lg overflow-hidden mt-2">
+            <div className="border border-fest-line rounded-lg overflow-hidden mt-2">
               {staffList.map((s, i) => (
                 <div
                   key={s.id}
-                  className={`flex items-center justify-between px-4 py-3 ${i > 0 ? 'border-t border-gray-100' : ''}`}
+                  className={`flex items-center justify-between px-4 py-3 ${i > 0 ? 'border-t border-fest-line/70' : ''}`}
                 >
                   <div>
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-fest-ink">
                       {s.email}
                       {s.user_id === ownerUserId && <span className="ml-2 text-xs font-normal text-gray-500">Owner</span>}
                       {s.user_id === currentUserId && <span className="ml-2 text-xs font-normal text-gray-500">You</span>}

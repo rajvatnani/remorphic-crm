@@ -33,7 +33,7 @@ export default async function VisitsPage() {
     <div className="p-6 max-w-6xl">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-heading text-4xl font-extrabold text-gray-900 tracking-tight">Visit Log</h1>
+          <h1 className="font-heading text-4xl font-extrabold text-fest-ink tracking-tight">Visit Log</h1>
           <p className="text-sm text-gray-500 mt-1">{rows.length} total</p>
         </div>
       </div>
