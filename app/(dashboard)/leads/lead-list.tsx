@@ -159,7 +159,7 @@ export default function LeadList({
         </select>
       </div>
 
-      <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
+      <div className="phone-cards bg-white rounded-3xl border border-fest-line overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-fest-cream hover:bg-fest-cream">
@@ -189,19 +189,19 @@ export default function LeadList({
               const isOpen = expanded.has(row.id)
               return (
                 <Fragment key={row.id}>
-                  <TableRow id={`lead-${row.id}`} className={`hover:bg-fest-cream ${isOpen ? 'bg-fest-marigoldsoft/40 border-b-0' : ''}`}>
+                  <TableRow id={`lead-${row.id}`} className={`hover:bg-fest-cream ${isOpen ? 'phone-open bg-fest-marigoldsoft/40 border-b-0' : ''}`}>
                     <TableCell>
                       <span className="font-medium text-fest-ink">{row.name}</span>
                     </TableCell>
                     <TableCell className="text-gray-600">{row.phone}</TableCell>
-                    <TableCell className="text-gray-600">{row.interest || '—'}</TableCell>
+                    <TableCell data-label="Interest" className="text-gray-600">{row.interest || '—'}</TableCell>
                     <TableCell>
                       <Badge className={STATUS_STYLES[row.status]}>
                         {STATUS_LABELS[row.status]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-gray-600">{formatDate(row.created_at)}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell data-label="Added" className="text-gray-600">{formatDate(row.created_at)}</TableCell>
+                    <TableCell className="phone-actions text-right">
                       <button
                         type="button"
                         onClick={() => setOpen(row.id, !isOpen)}
@@ -213,7 +213,7 @@ export default function LeadList({
                         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                       </button>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="phone-actions text-right">
                       <div className="flex items-center justify-end gap-1">
                         <AddInteractionDialog
                           leadId={row.id}
@@ -234,7 +234,7 @@ export default function LeadList({
                     </TableCell>
                   </TableRow>
                   {isOpen && (
-                    <TableRow className="bg-fest-marigoldsoft/40 hover:bg-fest-ranisoft/40">
+                    <TableRow className="phone-detail bg-fest-marigoldsoft/40 hover:bg-fest-ranisoft/40">
                       <TableCell colSpan={7} className="px-4 pb-4 pt-0 whitespace-normal">
                         <InteractionLog leadId={row.id} interactions={rowInteractions} />
                       </TableCell>

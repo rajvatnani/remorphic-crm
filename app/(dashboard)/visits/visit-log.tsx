@@ -195,7 +195,7 @@ export default function VisitLog({ visits, label }: { visits: VisitRow[]; label:
         {filtered.length} visit{filtered.length === 1 ? '' : 's'}
       </p>
 
-      <div className="bg-white rounded-3xl border border-fest-line overflow-hidden">
+      <div className="phone-cards bg-white rounded-3xl border border-fest-line overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-fest-cream hover:bg-fest-cream">
@@ -217,14 +217,14 @@ export default function VisitLog({ visits, label }: { visits: VisitRow[]; label:
             {sorted.map(visit => (
               <TableRow key={visit.id} className="hover:bg-fest-cream">
                 <TableCell className="text-gray-600 whitespace-nowrap">{formatVisitDate(visit.visitedAt)}</TableCell>
-                <TableCell>
+                <TableCell className="phone-title">
                   <Link href={`/customers/${visit.customerId}`} className="font-medium text-fest-ink hover:underline">
                     {visit.customerName}
                   </Link>
                 </TableCell>
                 <TableCell className="text-gray-600">{visit.customerPhone}</TableCell>
                 <TableCell className="text-gray-600">{visit.service}</TableCell>
-                <TableCell className="text-gray-500">{visit.notes || '—'}</TableCell>
+                <TableCell data-label="Notes" className="text-gray-500">{visit.notes || '—'}</TableCell>
               </TableRow>
             ))}
           </TableBody>

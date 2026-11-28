@@ -157,3 +157,41 @@
     @apply font-sans;
   }
 }
+/* Phones: tables inside .phone-cards turn into one card per row.
+   The first cell is the card's title, cells with data-label get a small label,
+   and the .phone-actions cell becomes a button row along the bottom. */
+@media (max-width: 767px) {
+  .phone-cards { background: transparent; border: 0; border-radius: 0; overflow: visible; }
+  .phone-cards [data-slot="table-container"] { overflow: visible; }
+  .phone-cards table, .phone-cards tbody { display: block; width: 100%; }
+  .phone-cards thead { display: none; }
+  .phone-cards tbody > tr {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem;
+    margin-bottom: 0.75rem; padding: 0.75rem 1rem;
+    background: white; border: 1px solid var(--color-fest-line); border-radius: 1.5rem;
+  }
+  .phone-cards tbody > tr > td { display: block; padding: 0; white-space: normal; text-align: left; }
+  .phone-cards tbody > tr > td:first-child { flex-basis: 100%; font-size: 0.95rem; }
+  .phone-cards tbody > tr > td[colspan] { flex-basis: 100%; }
+  .phone-cards td[data-label]::before {
+    content: attr(data-label) " "; font-size: 0.75rem; color: var(--color-gray-400);
+  }
+  /* Buttons always start their own row at the bottom, under a divider */
+  .phone-cards tbody > tr:has(> td.phone-actions)::before {
+    content: ""; order: 1; flex-basis: 100%; height: 0; margin-top: 0.25rem;
+    border-top: 1px solid color-mix(in oklab, var(--color-fest-line) 70%, transparent);
+  }
+  .phone-cards td.phone-actions { order: 2; flex-basis: 100%; display: flex; justify-content: flex-end; }
+  .phone-cards td.phone-actions > div { justify-content: flex-end; flex-wrap: wrap; }
+  /* When another cell is marked as the title, it goes first and the first cell is a plain detail */
+  .phone-cards tbody > tr:has(> .phone-title) > td:first-child { flex-basis: auto; font-size: inherit; }
+  .phone-cards tbody > tr > td.phone-title { order: -1; flex-basis: 100%; font-size: 0.95rem; }
+  /* Cards inside a card (a lead's interactions) */
+  .phone-cards .phone-cards tbody > tr { background: var(--color-fest-cream); }
+  /* Two button cells side by side share the bottom row: first on the left, second on the right */
+  .phone-cards td.phone-actions:has(+ td.phone-actions) { flex: 1 1 auto; justify-content: flex-start; }
+  .phone-cards td.phone-actions + td.phone-actions { flex: 0 0 auto; }
+  /* A row with an open detail row under it: join the two into one card */
+  .phone-cards tbody > tr.phone-open { margin-bottom: 0; border-bottom: 0; border-radius: 1.5rem 1.5rem 0 0; }
+  .phone-cards tbody > tr.phone-detail { border-top: 0; border-radius: 0 0 1.5rem 1.5rem; padding-top: 0; }
+}
