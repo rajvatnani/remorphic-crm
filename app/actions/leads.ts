@@ -55,7 +55,6 @@ export async function updateLead(leadId: string, formData: FormData) {
   if (error) throw new Error(error.message)
 
   revalidatePath('/leads')
-  revalidatePath(`/leads/${leadId}`)
 }
 
 export async function deleteLead(leadId: string) {
@@ -99,7 +98,6 @@ export async function addInteraction(leadId: string, formData: FormData) {
 
   if (error) throw new Error(error.message)
 
-  revalidatePath(`/leads/${leadId}`)
   revalidatePath('/leads')
   revalidatePath('/leads/due')
 }
@@ -132,12 +130,11 @@ export async function updateInteraction(interactionId: string, leadId: string, f
 
   if (error) throw new Error(error.message)
 
-  revalidatePath(`/leads/${leadId}`)
   revalidatePath('/leads')
   revalidatePath('/leads/due')
 }
 
-export async function deleteInteraction(interactionId: string, leadId: string) {
+export async function deleteInteraction(interactionId: string) {
   const supabase = await createClient()
   const business = await getBusiness(supabase)
 
@@ -149,7 +146,6 @@ export async function deleteInteraction(interactionId: string, leadId: string) {
 
   if (error) throw new Error(error.message)
 
-  revalidatePath(`/leads/${leadId}`)
   revalidatePath('/leads')
   revalidatePath('/leads/due')
 }
