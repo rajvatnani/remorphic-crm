@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Plus } from 'lucide-react'
+import { Plus, MessageSquarePlus } from 'lucide-react'
 
 function localDateStr(d: Date) {
   const y = d.getFullYear()
@@ -24,7 +24,18 @@ function localDateStr(d: Date) {
   return `${y}-${m}-${day}`
 }
 
-export default function AddInteractionDialog({ leadId }: { leadId: string }) {
+export default function AddInteractionDialog({
+  leadId,
+  leadName,
+  compact = false,
+  onAdded,
+}: {
+  leadId: string
+  leadName?: string
+  /** An icon button for table rows, like the Edit lead button */
+  compact?: boolean
+  onAdded?: () => void
+}) {
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -41,6 +52,7 @@ export default function AddInteractionDialog({ leadId }: { leadId: string }) {
       setOpen(false)
       formRef.current?.reset()
       setType('call')
+      onAdded?.()
       router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
@@ -51,13 +63,24 @@ export default function AddInteractionDialog({ leadId }: { leadId: string }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button className="bg-[#F15A24] hover:bg-[#d44d1b] text-white gap-2" />}>
-        <Plus className="h-4 w-4" />
-        Add Interaction
-      </DialogTrigger>
+      {compact ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="p-1.5 rounded-lg text-gray-400 hover:text-[#F15A24] hover:bg-orange-50 transition-colors"
+          title="Add interaction"
+        >
+          <MessageSquarePlus className="h-4 w-4" />
+        </button>
+      ) : (
+        <DialogTrigger render={<Button className="bg-[#F15A24] hover:bg-[#d44d1b] text-white gap-2" />}>
+          <Plus className="h-4 w-4" />
+          Add Interaction
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Interaction</DialogTitle>
+          <DialogTitle>Add Interaction{leadName ? ` — ${leadName}` : ''}</DialogTitle>
         </DialogHeader>
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="grid grid-cols-2 gap-4">

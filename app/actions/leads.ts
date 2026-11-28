@@ -100,6 +100,8 @@ export async function addInteraction(leadId: string, formData: FormData) {
   if (error) throw new Error(error.message)
 
   revalidatePath(`/leads/${leadId}`)
+  revalidatePath('/leads')
+  revalidatePath('/leads/due')
 }
 
 export async function updateInteraction(interactionId: string, leadId: string, formData: FormData) {
@@ -131,6 +133,8 @@ export async function updateInteraction(interactionId: string, leadId: string, f
   if (error) throw new Error(error.message)
 
   revalidatePath(`/leads/${leadId}`)
+  revalidatePath('/leads')
+  revalidatePath('/leads/due')
 }
 
 export async function deleteInteraction(interactionId: string, leadId: string) {
@@ -146,4 +150,6 @@ export async function deleteInteraction(interactionId: string, leadId: string) {
   if (error) throw new Error(error.message)
 
   revalidatePath(`/leads/${leadId}`)
+  revalidatePath('/leads')
+  revalidatePath('/leads/due')
 }
