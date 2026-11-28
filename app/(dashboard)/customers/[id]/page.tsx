@@ -1,4 +1,7 @@
 import { getBusinessContext } from '@/lib/get-business-context'
+import { enabledModules } from '@/lib/modules'
+import { loadOrderData } from '@/lib/orders-data'
+import OrderList from '@/components/orders/order-list'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,6 +44,9 @@ export default async function CustomerDetailPage({
     .eq('business_id', business.id)
     .order('visited_at', { ascending: false })
 
+  const modules = enabledModules(business)
+  const orderData = modules.orders ? await loadOrderData(supabase, business.id, id) : null
+
   const threshold = business.inactive_threshold_days
   const label = business.customer_label ?? 'Customer'
 
@@ -52,7 +58,7 @@ export default async function CustomerDetailPage({
   const isActive = lastVisit ? lastVisit >= thresholdStr : false
 
   return (
-    <div className="p-6 max-w-3xl">
+    <div className="p-6 max-w-4xl">
       <Link
         href="/customers"
         className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 mb-6"
@@ -120,6 +126,21 @@ export default async function CustomerDetailPage({
         </Card>
       </div>
 
+      {orderData && (
+        <div className="mb-6">
+          <h2 className="font-semibold text-gray-900 mb-3">Orders</h2>
+          <OrderList
+            compact
+            orders={orderData.orders}
+            items={orderData.items}
+            customers={[{ id: customer.id, name: customer.name, phone: customer.phone }]}
+            customerLabel={label}
+            fixedCustomerId={customer.id}
+          />
+        </div>
+      )}
+
+      {modules.visits && (
       <div className="bg-white rounded-xl border border-gray-200">
         <div className="px-4 py-3 border-b border-gray-100">
           <h2 className="font-semibold text-gray-900">Visit History</h2>
@@ -146,6 +167,7 @@ export default async function CustomerDetailPage({
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }
