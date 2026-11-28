@@ -352,3 +352,62 @@ export async function getStockMoves(itemId: string): Promise<StockMove[]> {
 export async function canSendEmail(): Promise<boolean> {
   return emailConfigured()
 }
+
+// ─── order steps, payments, history ──────────────────────────────────────────
+
+export async function changeOrderStatus(
+  orderId: string,
+  status: OrderStatus,
+  details: { courier?: string; tracking?: string; deliveryCost?: string; cancelReason?: string } = {}
+): Promise<Result> {
+  const cost = details.deliveryCost?.trim() ? toPaise(details.deliveryCost) : null
+  if (cost !== null && cost < 0) return { ok: false, error: 'Delivery cost cannot be negative.' }
+  const { supabase } = await getBusiness()
+  const { error } = await supabase.rpc('change_order_status', {
+    p_order: orderId,
+    p_status: status,
+    p_courier: details.courier ?? null,
+    p_tracking: details.tracking ?? null,
+    p_delivery_cost_paise: cost,
+    p_cancel_reason: details.cancelReason ?? null,
+  })
+  if (error) return { ok: false, error: error.message }
+  refresh()
+  return { ok: true }
+}
+
+export type PaymentMethod = 'auto' | 'cod' | 'refunded'
+
+export async function recordPayment(orderId: string, paid: string, method: PaymentMethod, upiRef: string): Promise<Result> {
+  const paise = paid.trim() ? toPaise(paid) : 0
+  if (paise === null || paise < 0) return { ok: false, error: 'Enter the amount received.' }
+  if (!['auto', 'cod', 'refunded'].includes(method)) return { ok: false, error: 'Pick how it was paid.' }
+  const { supabase } = await getBusiness()
+  const { error } = await supabase.rpc('record_order_payment', {
+    p_order: orderId,
+    p_paid_paise: paise,
+    p_method: method,
+    p_upi_ref: upiRef,
+  })
+  if (error) return { ok: false, error: error.message }
+  refresh()
+  return { ok: true }
+}
+
+export async function markOrdersSeen(orderIds: string[]): Promise<void> {
+  if (!orderIds.length) return
+  const { supabase } = await getBusiness()
+  await supabase.rpc('mark_orders_seen', { p_orders: orderIds })
+}
+
+export interface StatusChange { from_status: string | null; to_status: string; created_at: string }
+
+export async function getOrderHistory(orderId: string): Promise<StatusChange[]> {
+  const { supabase } = await getBusiness()
+  const { data } = await supabase
+    .from('order_status_history')
+    .select('from_status, to_status, created_at')
+    .eq('order_id', orderId)
+    .order('created_at')
+  return (data ?? []) as StatusChange[]
+}

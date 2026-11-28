@@ -88,7 +88,7 @@ export default function ReportsView({ orders, items, categories, customerLabel, 
     <div className="p-6 max-w-6xl space-y-5">
       <div>
         <h1 className="font-heading text-4xl font-extrabold text-gray-900 tracking-tight">Reports</h1>
-        <p className="text-sm text-gray-500 mt-1">Counts confirmed, ready and delivered orders. New and cancelled orders are left out.</p>
+        <p className="text-sm text-gray-500 mt-1">Counts confirmed, packed, shipped and delivered orders. New and cancelled orders are left out. Profit is after what you paid for delivery.</p>
       </div>
 
       {/* Period, one row above everything it filters */}
